@@ -31090,7 +31090,7 @@ async function run() {
         const githubToken = core.getInput('github-token', { required: true });
         const aiProvider = core.getInput('ai-provider', { required: false }) || 'gemini';
         const aiApiKey = core.getInput('ai-api-key', { required: true });
-        const modelName = core.getInput('model-name', { required: false }) || 'gemini-pro';
+        const modelName = core.getInput('model-name', { required: false }) || 'gemini-pro-vision';
         core.info('Starting gen-visual action...');
         // Initialize services
         const githubService = new github_service_1.GitHubService(githubToken);
