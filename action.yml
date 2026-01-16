@@ -13,9 +13,9 @@ inputs:
     description: 'API key for the AI provider'
     required: true
   model-name:
-    description: 'Model name to use (e.g., gemini-pro-vision)'
+    description: 'Model name to use (e.g., gemini-3-pro-image-preview)'
     required: false
-    default: 'gemini-pro-vision'
+    default: 'gemini-3-pro-image-preview'
 runs:
   using: 'node20'
   main: 'dist/index.js'

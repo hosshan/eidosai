@@ -6,44 +6,36 @@ export class GeminiProvider implements AIProvider {
   private genAI: GoogleGenerativeAI;
   private modelName: string;
 
-  constructor(apiKey: string, modelName: string = 'gemini-pro-vision') {
+  constructor(apiKey: string, modelName: string = 'gemini-3-pro-image-preview') {
     this.genAI = new GoogleGenerativeAI(apiKey);
     this.modelName = modelName;
   }
 
   async generateImages(context: IssueContext, command: Command): Promise<string[]> {
-    const model = this.genAI.getGenerativeModel({ model: this.modelName });
-    
     const imageCount = command.type === 'concept' ? 2 : 4;
     const imageType = command.type === 'concept' ? 'concept images' : 'wireframe images';
     
-    const prompt = this.buildPrompt(context, command, imageType, imageCount);
-    
-    core.info(`Generating ${imageCount} ${imageType}...`);
+    core.info(`Generating ${imageCount} ${imageType} using ${this.modelName}...`);
     
     try {
-      const result = await model.generateContent(prompt);
-      const response = await result.response;
-      const text = response.text();
-      
-      core.info(`AI Response: ${text.substring(0, 200)}...`);
-      
-      // NOTE: Gemini is a text generation model and doesn't directly generate images.
-      // The AI response contains descriptions of the images to be generated.
-      // 
-      // To integrate with an actual image generation service:
-      // 1. Parse the AI response text to extract image descriptions
-      // 2. Send descriptions to an image generation API (e.g., DALL-E, Stable Diffusion, Midjourney)
-      // 3. Upload generated images to a hosting service (e.g., GitHub assets, Imgur, S3)
-      // 4. Return the hosted image URLs
-      //
-      // For now, returning placeholder URLs for demonstration:
       const images: string[] = [];
+      
+      // Generate each image with a specific prompt
       for (let i = 0; i < imageCount; i++) {
-        images.push(`https://via.placeholder.com/800x600?text=${command.type}+${i + 1}`);
+        const prompt = this.buildPrompt(context, command, imageType, i + 1, imageCount);
+        core.info(`Generating image ${i + 1}/${imageCount}...`);
+        
+        const imageUrl = await this.generateSingleImage(prompt);
+        if (imageUrl) {
+          images.push(imageUrl);
+        }
       }
       
-      core.info(`Generated ${images.length} images`);
+      if (images.length === 0) {
+        throw new Error('No images were generated');
+      }
+      
+      core.info(`Successfully generated ${images.length} images`);
       return images;
     } catch (error) {
       core.error(`Failed to generate images: ${error}`);
@@ -51,32 +43,72 @@ export class GeminiProvider implements AIProvider {
     }
   }
 
-  private buildPrompt(context: IssueContext, command: Command, imageType: string, count: number): string {
+  private async generateSingleImage(prompt: string): Promise<string> {
+    try {
+      const model = this.genAI.getGenerativeModel({ model: this.modelName });
+      
+      const result = await model.generateContent({
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      });
+      
+      const response = result.response;
+      
+      // Check if the response contains image data
+      // The Gemini image generation API returns base64 encoded images
+      if (response.candidates && response.candidates.length > 0) {
+        const candidate = response.candidates[0];
+        
+        // Look for image parts in the response
+        if (candidate.content && candidate.content.parts) {
+          for (const part of candidate.content.parts) {
+            // Check if this part contains inline data (image)
+            if ('inlineData' in part && part.inlineData) {
+              const mimeType = part.inlineData.mimeType || 'image/png';
+              const data = part.inlineData.data;
+              
+              // Return data URL format that can be embedded in markdown
+              return `data:${mimeType};base64,${data}`;
+            }
+          }
+        }
+      }
+      
+      throw new Error('No image data found in response');
+    } catch (error) {
+      core.error(`Error generating single image: ${error}`);
+      throw error;
+    }
+  }
+
+  private buildPrompt(context: IssueContext, command: Command, imageType: string, imageNumber: number, totalCount: number): string {
     const fullContext = `${context.issueBody}\n\n${context.commentBody}`;
     
     if (command.type === 'concept') {
-      return `Based on the following requirement, generate ${count} concept images that visualize the main ideas and user experience:
+      const aspects = [
+        'overall user interface design direction and visual style',
+        'key visual elements, branding, and color scheme'
+      ];
+      const aspect = aspects[imageNumber - 1] || aspects[0];
+      
+      return `Create a concept image (${imageNumber}/${totalCount}) for the following requirement that shows ${aspect}:
 
 ${fullContext}
 
-Please create visual concepts that show:
-1. The overall user interface design direction
-2. Key visual elements and branding
-3. User interaction flow
-
-Respond with descriptions for ${count} concept images.`;
+Generate a high-quality concept visualization that clearly demonstrates ${aspect}. The image should be professional and visually appealing.`;
     } else {
-      return `Based on the following requirement, generate ${count} wireframe images that show the UI structure and layout:
+      const aspects = [
+        'main page layout and overall structure',
+        'detailed UI components and their placement',
+        'navigation flow and menu structure',
+        'user interaction points and key features'
+      ];
+      const aspect = aspects[imageNumber - 1] || aspects[0];
+      
+      return `Create a wireframe image (${imageNumber}/${totalCount}) for the following requirement that shows ${aspect}:
 
 ${fullContext}
 
-Please create wireframes that show:
-1. Page layout and structure
-2. UI components and their placement
-3. Navigation flow
-4. Key interactions
-
-Respond with descriptions for ${count} wireframe images.`;
+Generate a clear wireframe diagram that shows ${aspect}. The wireframe should be clean, well-organized, and easy to understand, using typical wireframe conventions (boxes, labels, simple shapes).`;
     }
   }
 }

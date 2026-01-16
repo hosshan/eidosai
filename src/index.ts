@@ -10,7 +10,7 @@ async function run(): Promise<void> {
     const githubToken = core.getInput('github-token', { required: true });
     const aiProvider = core.getInput('ai-provider', { required: false }) || 'gemini';
     const aiApiKey = core.getInput('ai-api-key', { required: true });
-    const modelName = core.getInput('model-name', { required: false }) || 'gemini-pro-vision';
+    const modelName = core.getInput('model-name', { required: false }) || 'gemini-3-pro-image-preview';
 
     core.info('Starting gen-visual action...');
 

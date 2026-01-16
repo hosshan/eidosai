@@ -1,10 +1,10 @@
 # gen-visual-issue
 
-GitHub Issue上でAI（Gemini Nanobananaなど）を使って要件の図示化を行うGitHub Action
+GitHub Issue上でAI（Gemini画像生成API）を使って要件の図示化を行うGitHub Action
 
 ## 概要
 
-GitHub Issueで **@gen-visual** にメンションして指示を出すと、Issue本文・コメントから要件を要約し、**コンセプト画像**や**ワイヤーフレーム画像**を生成して、Issueコメントとして貼り付けます。
+GitHub Issueで **@gen-visual** にメンションして指示を出すと、Issue本文・コメントから要件を要約し、**コンセプト画像**や**ワイヤーフレーム画像**をGemini画像生成APIで生成して、Issueコメントとして貼り付けます。
 
 ## コマンド
 
@@ -46,7 +46,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           ai-api-key: ${{ secrets.AI_API_KEY }}
           ai-provider: 'gemini'
-          model-name: 'gemini-pro'
+          model-name: 'gemini-3-pro-image-preview'
 ```
 
 ### 2. シークレットの設定
@@ -65,27 +65,13 @@ jobs:
 
 現在サポートしているプロバイダ：
 
-- `gemini` - Google Gemini API（デフォルト）
+- `gemini` - Google Gemini 画像生成API（`gemini-3-pro-image-preview`モデル使用）
 
-## 画像生成の拡張
+### 画像生成について
 
-現在の実装では、Gemini AIが画像の**説明文**を生成し、プレースホルダー画像URLを返します。
+このアクションは、Geminiの画像生成モデル（`gemini-3-pro-image-preview`）を使用して、実際の画像を生成します。生成された画像は、base64エンコードされたデータURLとしてGitHub Issueコメントに埋め込まれます。
 
-実際の画像生成を統合するには、`src/ai-provider.ts`の`generateImages`メソッドを拡張してください：
-
-1. Gemini APIのレスポンスから画像の説明を解析
-2. 説明を画像生成API（DALL-E、Stable Diffusion、Midjourneyなど）に送信
-3. 生成された画像をホスティングサービス（GitHub Assets、Imgur、S3など）にアップロード
-4. ホストされた画像のURLを返す
-
-```typescript
-// 例：DALL-E統合
-const descriptions = parseDescriptions(text);
-const images = await Promise.all(
-  descriptions.map(desc => generateImageWithDALLE(desc))
-);
-return images.map(img => img.url);
-```
+モデルの詳細: https://ai.google.dev/gemini-api/docs/image-generation
 
 ## 入力パラメータ
 
