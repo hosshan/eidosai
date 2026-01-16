@@ -30874,7 +30874,7 @@ const core = __importStar(__nccwpck_require__(7484));
 class GeminiProvider {
     genAI;
     modelName;
-    constructor(apiKey, modelName = 'gemini-pro') {
+    constructor(apiKey, modelName = 'gemini-pro-vision') {
         this.genAI = new generative_ai_1.GoogleGenerativeAI(apiKey);
         this.modelName = modelName;
     }
@@ -30888,9 +30888,17 @@ class GeminiProvider {
             const result = await model.generateContent(prompt);
             const response = await result.response;
             const text = response.text();
-            // For now, return placeholder URLs since actual image generation 
-            // requires a different API or service
-            // In production, this would integrate with an actual image generation service
+            core.info(`AI Response: ${text.substring(0, 200)}...`);
+            // NOTE: Gemini is a text generation model and doesn't directly generate images.
+            // The AI response contains descriptions of the images to be generated.
+            // 
+            // To integrate with an actual image generation service:
+            // 1. Parse the AI response text to extract image descriptions
+            // 2. Send descriptions to an image generation API (e.g., DALL-E, Stable Diffusion, Midjourney)
+            // 3. Upload generated images to a hosting service (e.g., GitHub assets, Imgur, S3)
+            // 4. Return the hosted image URLs
+            //
+            // For now, returning placeholder URLs for demonstration:
             const images = [];
             for (let i = 0; i < imageCount; i++) {
                 images.push(`https://via.placeholder.com/800x600?text=${command.type}+${i + 1}`);

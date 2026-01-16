@@ -67,6 +67,26 @@ jobs:
 
 - `gemini` - Google Gemini API（デフォルト）
 
+## 画像生成の拡張
+
+現在の実装では、Gemini AIが画像の**説明文**を生成し、プレースホルダー画像URLを返します。
+
+実際の画像生成を統合するには、`src/ai-provider.ts`の`generateImages`メソッドを拡張してください：
+
+1. Gemini APIのレスポンスから画像の説明を解析
+2. 説明を画像生成API（DALL-E、Stable Diffusion、Midjourneyなど）に送信
+3. 生成された画像をホスティングサービス（GitHub Assets、Imgur、S3など）にアップロード
+4. ホストされた画像のURLを返す
+
+```typescript
+// 例：DALL-E統合
+const descriptions = parseDescriptions(text);
+const images = await Promise.all(
+  descriptions.map(desc => generateImageWithDALLE(desc))
+);
+return images.map(img => img.url);
+```
+
 ## 入力パラメータ
 
 | パラメータ | 説明 | 必須 | デフォルト |
@@ -80,6 +100,47 @@ jobs:
 
 - Issueの本文
 - @gen-visualをメンションしたコメントの全文
+
+## 使用例
+
+### 例1: ワイヤーフレーム生成
+
+Issue本文:
+```
+ユーザーログイン機能を実装したい
+
+## 要件
+- メールアドレスとパスワードでログイン
+- ログイン画面にはロゴとフォーム
+- パスワードを忘れた場合のリンク
+- 新規登録へのリンク
+```
+
+コメント:
+```
+@gen-visual wf
+```
+
+→ ログイン画面のワイヤーフレーム（2-6枚）が自動生成され、コメントで投稿されます
+
+### 例2: コンセプト画像生成
+
+Issue本文:
+```
+ECサイトのトップページをリニューアル
+
+## コンセプト
+- モダンでミニマルなデザイン
+- 商品画像を大きく見せる
+- シンプルなナビゲーション
+```
+
+コメント:
+```
+@gen-visual concept
+```
+
+→ トップページのコンセプト画像（1-2枚）が自動生成され、コメントで投稿されます
 
 ## 開発
 
