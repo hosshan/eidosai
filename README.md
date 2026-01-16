@@ -71,7 +71,7 @@ jobs:
 
 このアクションは、Geminiの画像生成モデル（`gemini-3-pro-image-preview`）を使用して、実際の画像を生成します。生成された画像は、base64エンコードされたデータURLとしてGitHub Issueコメントに埋め込まれます。
 
-モデルの詳細: https://ai.google.dev/gemini-api/docs/image-generation
+**注意**: `gemini-3-pro-image-preview`モデルはプレビュー版のため、利用可能性や動作が変更される場合があります。Gemini APIキーに画像生成機能が有効になっていることを確認してください。
 
 ## 入力パラメータ
 

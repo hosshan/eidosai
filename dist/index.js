@@ -31544,7 +31544,7 @@ class GeminiProvider {
             });
             const response = result.response;
             // Check if the response contains image data
-            // The Gemini image generation API returns base64 encoded images
+            // The Gemini image generation API should return base64 encoded images
             if (response.candidates && response.candidates.length > 0) {
                 const candidate = response.candidates[0];
                 // Look for image parts in the response
@@ -31559,8 +31559,16 @@ class GeminiProvider {
                         }
                     }
                 }
+                // If no inline data found, check if there's text that might contain image data
+                // This is a fallback for different response formats
+                const text = response.text();
+                if (text) {
+                    core.info(`Response text received: ${text.substring(0, 100)}...`);
+                }
             }
-            throw new Error('No image data found in response');
+            // If we reach here, the response format is not as expected
+            core.warning('No image data found in response. The model may not support image generation or returned an unexpected format.');
+            throw new Error('No image data found in response. Please verify that the model supports image generation.');
         }
         catch (error) {
             core.error(`Error generating single image: ${error}`);
