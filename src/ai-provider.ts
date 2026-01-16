@@ -1,0 +1,132 @@
+import { AIProvider, Command, IssueContext } from './types';
+import { GoogleGenerativeAI } from '@google/generative-ai';
+import * as core from '@actions/core';
+
+export class GeminiProvider implements AIProvider {
+  private genAI: GoogleGenerativeAI;
+  private modelName: string;
+
+  constructor(apiKey: string, modelName: string = 'gemini-3-pro-image-preview') {
+    this.genAI = new GoogleGenerativeAI(apiKey);
+    this.modelName = modelName;
+  }
+
+  async generateImages(context: IssueContext, command: Command): Promise<string[]> {
+    const imageCount = command.type === 'concept' ? 2 : 4;
+    const imageType = command.type === 'concept' ? 'concept images' : 'wireframe images';
+    
+    core.info(`Generating ${imageCount} ${imageType} using ${this.modelName}...`);
+    
+    try {
+      const images: string[] = [];
+      
+      // Generate each image with a specific prompt
+      for (let i = 0; i < imageCount; i++) {
+        const prompt = this.buildPrompt(context, command, imageType, i + 1, imageCount);
+        core.info(`Generating image ${i + 1}/${imageCount}...`);
+        
+        const imageUrl = await this.generateSingleImage(prompt);
+        if (imageUrl) {
+          images.push(imageUrl);
+        }
+      }
+      
+      if (images.length === 0) {
+        throw new Error('No images were generated');
+      }
+      
+      core.info(`Successfully generated ${images.length} images`);
+      return images;
+    } catch (error) {
+      core.error(`Failed to generate images: ${error}`);
+      throw error;
+    }
+  }
+
+  private async generateSingleImage(prompt: string): Promise<string> {
+    try {
+      const model = this.genAI.getGenerativeModel({ model: this.modelName });
+      
+      const result = await model.generateContent({
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      });
+      
+      const response = result.response;
+      
+      // Check if the response contains image data
+      // The Gemini image generation API should return base64 encoded images
+      if (response.candidates && response.candidates.length > 0) {
+        const candidate = response.candidates[0];
+        
+        // Look for image parts in the response
+        if (candidate.content && candidate.content.parts) {
+          for (const part of candidate.content.parts) {
+            // Check if this part contains inline data (image)
+            if ('inlineData' in part && part.inlineData) {
+              const mimeType = part.inlineData.mimeType || 'image/png';
+              const data = part.inlineData.data;
+              
+              // Return data URL format that can be embedded in markdown
+              return `data:${mimeType};base64,${data}`;
+            }
+          }
+        }
+        
+        // If no inline data found, check if there's text that might contain image data
+        // This is a fallback for different response formats
+        const text = response.text();
+        if (text) {
+          core.info(`Response text received: ${text.substring(0, 100)}...`);
+        }
+      }
+      
+      // If we reach here, the response format is not as expected
+      core.warning('No image data found in response. The model may not support image generation or returned an unexpected format.');
+      throw new Error('No image data found in response. Please verify that the model supports image generation.');
+    } catch (error) {
+      core.error(`Error generating single image: ${error}`);
+      throw error;
+    }
+  }
+
+  private buildPrompt(context: IssueContext, command: Command, imageType: string, imageNumber: number, totalCount: number): string {
+    const fullContext = `${context.issueBody}\n\n${context.commentBody}`;
+    
+    if (command.type === 'concept') {
+      const aspects = [
+        'overall user interface design direction and visual style',
+        'key visual elements, branding, and color scheme'
+      ];
+      const aspect = aspects[imageNumber - 1] || aspects[0];
+      
+      return `Create a concept image (${imageNumber}/${totalCount}) for the following requirement that shows ${aspect}:
+
+${fullContext}
+
+Generate a high-quality concept visualization that clearly demonstrates ${aspect}. The image should be professional and visually appealing.`;
+    } else {
+      const aspects = [
+        'main page layout and overall structure',
+        'detailed UI components and their placement',
+        'navigation flow and menu structure',
+        'user interaction points and key features'
+      ];
+      const aspect = aspects[imageNumber - 1] || aspects[0];
+      
+      return `Create a wireframe image (${imageNumber}/${totalCount}) for the following requirement that shows ${aspect}:
+
+${fullContext}
+
+Generate a clear wireframe diagram that shows ${aspect}. The wireframe should be clean, well-organized, and easy to understand, using typical wireframe conventions (boxes, labels, simple shapes).`;
+    }
+  }
+}
+
+export function createAIProvider(provider: string, apiKey: string, modelName: string): AIProvider {
+  switch (provider.toLowerCase()) {
+    case 'gemini':
+      return new GeminiProvider(apiKey, modelName);
+    default:
+      throw new Error(`Unsupported AI provider: ${provider}`);
+  }
+}
