@@ -135,7 +135,8 @@ export class GeminiProvider implements AIProvider {
         imageNumber,
         totalCount,
         aspect,
-        fullContext
+        fullContext,
+        commonContext: this.promptConfig.commonContext
       };
       
       // Use custom template if provided, otherwise use default function
@@ -154,7 +155,8 @@ export class GeminiProvider implements AIProvider {
         totalCount,
         aspect,
         fullContext,
-        customInstruction
+        customInstruction,
+        commonContext: this.promptConfig.commonContext
       };
       
       // Use custom template if provided, otherwise use default function
@@ -172,7 +174,8 @@ export class GeminiProvider implements AIProvider {
         imageNumber,
         totalCount,
         aspect,
-        fullContext
+        fullContext,
+        commonContext: this.promptConfig.commonContext
       };
       
       // Use custom template if provided, otherwise use default function

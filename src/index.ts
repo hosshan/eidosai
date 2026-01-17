@@ -29,6 +29,7 @@ async function run(): Promise<void> {
     const customTemplate = core.getInput('system-prompt-custom', { required: false });
     const wireframeAspectsInput = core.getInput('system-prompt-wf-aspects', { required: false });
     const conceptAspectsInput = core.getInput('system-prompt-concept-aspects', { required: false });
+    const commonContext = core.getInput('system-prompt-common-context', { required: false });
 
     // Build PromptConfig
     const promptConfig: PromptConfig = {};
@@ -47,6 +48,9 @@ async function run(): Promise<void> {
     }
     if (conceptAspectsInput) {
       promptConfig.conceptAspects = conceptAspectsInput.split(',').map(a => a.trim()).filter(a => a.length > 0);
+    }
+    if (commonContext) {
+      promptConfig.commonContext = commonContext;
     }
 
     core.info('Starting gen-visual action...');

@@ -42,4 +42,5 @@ export interface PromptConfig {
   customTemplate?: string;
   wireframeAspects?: string[];
   conceptAspects?: string[];
+  commonContext?: string;
 }

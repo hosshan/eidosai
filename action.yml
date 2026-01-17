@@ -30,19 +30,22 @@ inputs:
     required: false
     default: '2592000'
   system-prompt-wf:
-    description: 'Custom system prompt template for wireframe images. Supports placeholders: {{imageNumber}}, {{totalCount}}, {{aspect}}, {{fullContext}}'
+    description: 'Custom system prompt template for wireframe images. Supports placeholders: {{imageNumber}}, {{totalCount}}, {{aspect}}, {{fullContext}}, {{commonContext}}'
     required: false
   system-prompt-concept:
-    description: 'Custom system prompt template for concept images. Supports placeholders: {{imageNumber}}, {{totalCount}}, {{aspect}}, {{fullContext}}'
+    description: 'Custom system prompt template for concept images. Supports placeholders: {{imageNumber}}, {{totalCount}}, {{aspect}}, {{fullContext}}, {{commonContext}}'
     required: false
   system-prompt-custom:
-    description: 'Custom system prompt template for custom images. Supports placeholders: {{imageNumber}}, {{totalCount}}, {{aspect}}, {{fullContext}}, {{customInstruction}}'
+    description: 'Custom system prompt template for custom images. Supports placeholders: {{imageNumber}}, {{totalCount}}, {{aspect}}, {{fullContext}}, {{customInstruction}}, {{commonContext}}'
     required: false
   system-prompt-wf-aspects:
     description: 'Comma-separated list of aspects for wireframe images (e.g., "layout,components,navigation,interactions")'
     required: false
   system-prompt-concept-aspects:
     description: 'Comma-separated list of aspects for concept images (e.g., "design direction,visual style")'
+    required: false
+  system-prompt-common-context:
+    description: 'Common context for all image types (service overview, brand guidelines, design principles, etc.). Automatically included in all prompts.'
     required: false
 runs:
   using: 'node20'

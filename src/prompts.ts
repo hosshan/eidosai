@@ -20,15 +20,20 @@ export interface PromptParams {
   aspect: string;
   fullContext: string;
   customInstruction?: string;
+  commonContext?: string;
 }
 
 /**
  * Build a wireframe prompt
  */
 export function buildWireframePrompt(params: PromptParams): string {
-  const { imageNumber, totalCount, aspect, fullContext } = params;
+  const { imageNumber, totalCount, aspect, fullContext, commonContext } = params;
   
-  return `Create a wireframe image (${imageNumber}/${totalCount}) for the following requirement that shows ${aspect}:
+  const commonContextSection = commonContext 
+    ? `## Service Context\n${commonContext}\n\n` 
+    : '';
+  
+  return `${commonContextSection}Create a wireframe image (${imageNumber}/${totalCount}) for the following requirement that shows ${aspect}:
 
 ${fullContext}
 
@@ -39,9 +44,13 @@ Generate a clear wireframe diagram that shows ${aspect}. The wireframe should be
  * Build a concept prompt
  */
 export function buildConceptPrompt(params: PromptParams): string {
-  const { imageNumber, totalCount, aspect, fullContext } = params;
+  const { imageNumber, totalCount, aspect, fullContext, commonContext } = params;
   
-  return `Create a concept image (${imageNumber}/${totalCount}) for the following requirement that shows ${aspect}:
+  const commonContextSection = commonContext 
+    ? `## Service Context\n${commonContext}\n\n` 
+    : '';
+  
+  return `${commonContextSection}Create a concept image (${imageNumber}/${totalCount}) for the following requirement that shows ${aspect}:
 
 ${fullContext}
 
@@ -52,9 +61,13 @@ Generate a high-quality concept visualization that clearly demonstrates ${aspect
  * Build a custom prompt
  */
 export function buildCustomPrompt(params: PromptParams): string {
-  const { imageNumber, totalCount, fullContext, customInstruction } = params;
+  const { imageNumber, totalCount, fullContext, customInstruction, commonContext } = params;
   
-  return `Create a custom image (${imageNumber}/${totalCount}) based on the following requirements and custom instruction:
+  const commonContextSection = commonContext 
+    ? `## Service Context\n${commonContext}\n\n` 
+    : '';
+  
+  return `${commonContextSection}Create a custom image (${imageNumber}/${totalCount}) based on the following requirements and custom instruction:
 
 ${fullContext}
 
@@ -74,6 +87,7 @@ export function replacePlaceholders(template: string, params: PromptParams): str
   result = result.replace(/\{\{aspect\}\}/g, params.aspect || '');
   result = result.replace(/\{\{fullContext\}\}/g, params.fullContext);
   result = result.replace(/\{\{customInstruction\}\}/g, params.customInstruction || '');
+  result = result.replace(/\{\{commonContext\}\}/g, params.commonContext || '');
   
   return result;
 }

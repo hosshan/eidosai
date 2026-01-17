@@ -174,6 +174,7 @@ jobs:
 - `{{aspect}}` - 現在のアスペクト（aspects配列から取得）
 - `{{fullContext}}` - Issue本文とコメント本文の結合（またはコメント本文のみ）
 - `{{customInstruction}}` - カスタム指示（customタイプの場合のみ）
+- `{{commonContext}}` - 共通コンテキスト（すべての画像タイプで使用可能）
 
 ### カスタムアスペクト
 
@@ -182,6 +183,21 @@ jobs:
 アスペクトはカンマ区切りで指定します。例：
 - `system-prompt-wf-aspects: "レイアウト構造,UIコンポーネント,ナビゲーション,インタラクション"`
 - `system-prompt-concept-aspects: "デザイン方向性,ビジュアルスタイル"`
+
+### 共通コンテキスト
+
+`system-prompt-common-context` パラメータを使用して、すべての画像タイプ（wf、concept、custom）で共通して使用するコンテキストを指定できます。
+
+共通コンテキストには以下のような情報を含めることができます：
+
+- サービスの概要や目的
+- ブランドガイドライン
+- デザイン原則
+- ターゲットユーザー
+- 技術的制約
+- 既存のデザインシステムの情報
+
+共通コンテキストは、デフォルトのプロンプトでは自動的に各プロンプトの先頭に追加されます。カスタムテンプレートを使用している場合、`{{commonContext}}` プレースホルダーを使用して任意の位置に配置できます。
 
 ### 使用例
 
@@ -211,6 +227,7 @@ jobs:
 - カスタムテンプレートが指定されていない場合、デフォルトのプロンプトが使用されます。
 - カスタムアスペクトが指定されていない場合、デフォルトのアスペクトが使用されます。
 - テンプレート内のプレースホルダーは実行時に自動的に置換されます。
+- 共通コンテキストは、すべての画像タイプで自動的に使用されます。
 
 ## 入力パラメータ
 
@@ -229,6 +246,7 @@ jobs:
 | `system-prompt-custom` | カスタム用システムプロンプトテンプレート | いいえ | - |
 | `system-prompt-wf-aspects` | ワイヤーフレーム用アスペクト（カンマ区切り） | いいえ | - |
 | `system-prompt-concept-aspects` | コンセプト用アスペクト（カンマ区切り） | いいえ | - |
+| `system-prompt-common-context` | すべての画像タイプで共通して使用するコンテキスト | いいえ | - |
 
 ## AIに渡すコンテキスト
 
@@ -353,6 +371,32 @@ Issue本文:
 ```
 
 → カスタムプロンプトテンプレートとアスペクトを使用してコンセプト画像を生成します。
+
+### 例6: 共通コンテキストの使用
+
+ワークフローファイルで共通コンテキストを指定：
+
+```yaml
+- name: Run Gen Visual Action
+  uses: hosshan/gen-visual-issue@v1
+  with:
+    # ... 他の必須パラメータ ...
+    system-prompt-common-context: |
+      ## Service Overview
+      This is an e-commerce platform for selling handmade products.
+      
+      ## Brand Guidelines
+      - Color scheme: Warm earth tones
+      - Typography: Sans-serif, modern
+      - Style: Minimalist and clean
+      
+      ## Target Users
+      - Age: 25-45
+      - Interests: Handmade crafts, unique items
+      - Tech-savvy but prefer simplicity
+```
+
+→ すべての画像生成（wf、concept、custom）で、共通コンテキストが自動的に各プロンプトの先頭に追加されます。これにより、サービスの概要やブランドガイドラインを毎回指定する必要がなくなり、一貫したコンテキストを提供できます。
 
 ## 開発
 
