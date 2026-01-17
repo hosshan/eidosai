@@ -27,7 +27,7 @@ jobs:
           ai-api-key: ${{ secrets.AI_API_KEY }}
           ai-provider: 'gemini'
           model-name: 'gemini-3-pro-image-preview'
-          gcs-project-id: ${{ secrets.GCS_PROJECT_ID }}
-          gcs-bucket-name: ${{ secrets.GCS_BUCKET_NAME }}
+          gcs-project-id: ${{ vars.GCS_PROJECT_ID }}
+          gcs-bucket-name: ${{ vars.GCS_BUCKET_NAME }}
           gcs-service-account-key: ${{ secrets.GCS_SERVICE_ACCOUNT_KEY }}
           gcs-signed-url-expiry: '2592000'  # 30日

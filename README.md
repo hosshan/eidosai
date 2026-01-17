@@ -47,20 +47,30 @@ jobs:
           ai-api-key: ${{ secrets.AI_API_KEY }}
           ai-provider: 'gemini'
           model-name: 'gemini-3-pro-image-preview'
-          gcs-project-id: ${{ secrets.GCS_PROJECT_ID }}
-          gcs-bucket-name: ${{ secrets.GCS_BUCKET_NAME }}
+          gcs-project-id: ${{ vars.GCS_PROJECT_ID }}
+          gcs-bucket-name: ${{ vars.GCS_BUCKET_NAME }}
           gcs-service-account-key: ${{ secrets.GCS_SERVICE_ACCOUNT_KEY }}
           gcs-signed-url-expiry: '2592000'  # 30日（オプション）
 ```
 
-### 2. シークレットの設定
+### 2. シークレットと変数の設定
 
 リポジトリのSettings > Secrets and variables > Actionsで以下を設定：
 
+#### Secrets（機密情報）
+
 - `AI_API_KEY` - Gemini APIキーなど（必須）
+- `GCS_SERVICE_ACCOUNT_KEY` - Google Cloud Storage サービスアカウントキー（JSON文字列、必須）
+
+#### Variables（非機密情報）
+
 - `GCS_PROJECT_ID` - Google Cloud Storage プロジェクトID（必須）
 - `GCS_BUCKET_NAME` - Google Cloud Storage バケット名（必須）
-- `GCS_SERVICE_ACCOUNT_KEY` - Google Cloud Storage サービスアカウントキー（JSON文字列、必須）
+
+**注意**: 
+- Secretsは機密情報（APIキー、認証情報など）に使用します
+- Variablesは非機密情報（プロジェクトID、バケット名など）に使用します
+- プロジェクトIDとバケット名は公開情報の可能性があるため、Variablesとして設定することを推奨します
 
 #### GCSサービスアカウントキーの取得方法
 
