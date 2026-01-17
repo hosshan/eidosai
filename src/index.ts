@@ -4,7 +4,7 @@ import { parseCommand } from './parser';
 import { createAIProvider } from './ai-provider';
 import { GitHubService } from './github-service';
 import { GCSService } from './gcs-service';
-import { GCSConfig, PromptConfig } from './types';
+import { GCSConfig, PromptConfig, ImageUploadResult } from './types';
 
 async function run(): Promise<void> {
   try {
@@ -162,7 +162,7 @@ async function run(): Promise<void> {
 
     // Upload images to GCS and get signed URLs
     core.info(`Starting upload of ${imageDataArray.length} images to GCS...`);
-    const imageUrls: string[] = [];
+    const imageResults: ImageUploadResult[] = [];
     const uploadStartTime = Date.now();
     
     for (let i = 0; i < imageDataArray.length; i++) {
@@ -180,10 +180,18 @@ async function run(): Promise<void> {
       }
       
       try {
-        const signedUrl = await gcsService.uploadImage(imageDataArray[i]);
-        imageUrls.push(signedUrl);
+        const result = await gcsService.uploadImage(
+          imageDataArray[i],
+          issueContext.repository,
+          issueContext.issueNumber
+        );
+        imageResults.push(result);
         core.info(`✓ Image ${i + 1}/${imageDataArray.length} uploaded successfully`);
-        core.info(`  URL: ${signedUrl}`);
+        core.info(`  URL: ${result.url}`);
+        core.info(`  Bucket Path: ${result.bucketPath}`);
+        if (result.expiryDate) {
+          core.info(`  Expires: ${result.expiryDate.toISOString()}`);
+        }
       } catch (error) {
         core.error(`✗ Failed to upload image ${i + 1}/${imageDataArray.length}`);
         throw error;
@@ -193,16 +201,17 @@ async function run(): Promise<void> {
     // アップロード完了時のサマリーログ
     const uploadDuration = ((Date.now() - uploadStartTime) / 1000).toFixed(2);
     core.info(`\n=== Upload Summary ===`);
-    core.info(`Total images uploaded: ${imageUrls.length}/${imageDataArray.length}`);
+    core.info(`Total images uploaded: ${imageResults.length}/${imageDataArray.length}`);
     core.info(`Upload duration: ${uploadDuration}s`);
     core.info(`Uploaded URLs:`);
-    imageUrls.forEach((url, index) => {
-      core.info(`  ${index + 1}. ${url}`);
+    imageResults.forEach((result, index) => {
+      core.info(`  ${index + 1}. ${result.url}`);
+      core.info(`     Bucket: ${result.bucketPath}`);
     });
 
     // Post comment with images (update progress comment)
     core.info('Posting comment with generated images...');
-    await githubService.postComment(issueContext.issueNumber, imageUrls, command, progressCommentId);
+    await githubService.postComment(issueContext.issueNumber, imageResults, command, progressCommentId);
 
     core.info('Successfully completed gen-visual action!');
   } catch (error) {

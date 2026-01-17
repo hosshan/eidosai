@@ -26,9 +26,9 @@ inputs:
     description: 'Google Cloud Storage service account key (JSON string)'
     required: true
   gcs-signed-url-expiry:
-    description: 'Signed URL expiry in seconds (default: 2592000 = 30 days)'
+    description: 'Signed URL expiry in seconds (default: 31536000 = 1 year)'
     required: false
-    default: '2592000'
+    default: '31536000'
   system-prompt-wf:
     description: 'Custom system prompt template for wireframe images. Supports placeholders: {{imageNumber}}, {{totalCount}}, {{aspect}}, {{fullContext}}, {{commonContext}}'
     required: false
