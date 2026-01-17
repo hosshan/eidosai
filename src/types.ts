@@ -8,6 +8,8 @@ export interface IssueContext {
   commentBody: string;
   issueNumber: number;
   repository: string;
+  commentId?: number;
+  isFromComment: boolean;
 }
 
 export interface ImageData {
