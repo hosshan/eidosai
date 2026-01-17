@@ -19,6 +19,14 @@ export function parseCommand(text: string): Command | null {
     rest = rest.replace(/(?:--count|-c)\s+\d+/i, '').trim();
   }
   
+  // Extract --no-issue-body option
+  let excludeIssueBody = false;
+  if (rest.match(/--no-issue-body/i)) {
+    excludeIssueBody = true;
+    // Remove option from rest for further parsing
+    rest = rest.replace(/--no-issue-body/gi, '').trim();
+  }
+  
   // Check for existing types (wf or concept)
   const existingTypeMatch = rest.match(/^(wf|concept)$/i);
   if (existingTypeMatch) {
@@ -27,7 +35,8 @@ export function parseCommand(text: string): Command | null {
     return {
       type: commandType,
       rawText: text,
-      count: count
+      count: count,
+      excludeIssueBody: excludeIssueBody
     };
   }
   
@@ -41,7 +50,8 @@ export function parseCommand(text: string): Command | null {
       type: 'custom',
       rawText: text,
       customPrompt: customPrompt,
-      count: count
+      count: count,
+      excludeIssueBody: excludeIssueBody
     };
   }
   
@@ -60,7 +70,8 @@ export function parseCommand(text: string): Command | null {
       type: 'custom',
       rawText: text,
       customPrompt: customPrompt,
-      count: count
+      count: count,
+      excludeIssueBody: excludeIssueBody
     };
   }
   

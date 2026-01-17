@@ -3,6 +3,7 @@ export interface Command {
   rawText: string;
   count?: number;
   customPrompt?: string;
+  excludeIssueBody?: boolean;
 }
 
 export interface IssueContext {

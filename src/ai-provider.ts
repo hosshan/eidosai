@@ -112,7 +112,10 @@ export class GeminiProvider implements AIProvider {
 
   private buildPrompt(context: IssueContext, command: Command, imageType: string, imageNumber: number, totalCount: number): string {
     // Combine Issue body and comment body as context
-    const fullContext = `${context.issueBody}\n\n${context.commentBody}`;
+    // If excludeIssueBody is true, only use comment body
+    const fullContext = command.excludeIssueBody 
+      ? context.commentBody 
+      : `${context.issueBody}\n\n${context.commentBody}`;
     
     if (command.type === 'concept') {
       const aspects = [
