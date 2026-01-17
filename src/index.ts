@@ -104,10 +104,12 @@ async function run(): Promise<void> {
     }
 
     // Upload images to GCS and get signed URLs
-    core.info('Uploading images to GCS...');
+    core.info(`Starting upload of ${imageDataArray.length} images to GCS...`);
     const imageUrls: string[] = [];
+    const uploadStartTime = Date.now();
+    
     for (let i = 0; i < imageDataArray.length; i++) {
-      core.info(`Uploading image ${i + 1}/${imageDataArray.length}...`);
+      core.info(`\n--- Uploading image ${i + 1}/${imageDataArray.length} ---`);
       
       // Update progress during upload
       try {
@@ -120,9 +122,26 @@ async function run(): Promise<void> {
         core.warning(`Failed to update progress comment: ${error}`);
       }
       
-      const signedUrl = await gcsService.uploadImage(imageDataArray[i]);
-      imageUrls.push(signedUrl);
+      try {
+        const signedUrl = await gcsService.uploadImage(imageDataArray[i]);
+        imageUrls.push(signedUrl);
+        core.info(`✓ Image ${i + 1}/${imageDataArray.length} uploaded successfully`);
+        core.info(`  URL: ${signedUrl}`);
+      } catch (error) {
+        core.error(`✗ Failed to upload image ${i + 1}/${imageDataArray.length}`);
+        throw error;
+      }
     }
+    
+    // アップロード完了時のサマリーログ
+    const uploadDuration = ((Date.now() - uploadStartTime) / 1000).toFixed(2);
+    core.info(`\n=== Upload Summary ===`);
+    core.info(`Total images uploaded: ${imageUrls.length}/${imageDataArray.length}`);
+    core.info(`Upload duration: ${uploadDuration}s`);
+    core.info(`Uploaded URLs:`);
+    imageUrls.forEach((url, index) => {
+      core.info(`  ${index + 1}. ${url}`);
+    });
 
     // Post comment with images (update progress comment)
     core.info('Posting comment with generated images...');

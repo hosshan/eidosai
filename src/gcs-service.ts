@@ -38,10 +38,16 @@ export class GCSService {
       const extension = this.getExtensionFromMimeType(imageData.mimeType);
       const fileName = `${uuidv4()}${extension}`;
       
-      core.info(`Uploading image to GCS: ${fileName}`);
-      
       // Base64文字列をバイナリデータにデコード
       const buffer = Buffer.from(imageData.base64Data, 'base64');
+      const fileSizeKB = Math.round(buffer.length / 1024);
+      
+      // アップロード開始時の詳細ログ
+      core.info(`Uploading image to GCS...`);
+      core.info(`  File: ${fileName}`);
+      core.info(`  MIME Type: ${imageData.mimeType}`);
+      core.info(`  Size: ${fileSizeKB}KB`);
+      core.info(`  Bucket: ${this.bucketName}`);
       
       // バケットとファイルオブジェクトを取得
       const bucket = this.storage.bucket(this.bucketName);
@@ -54,19 +60,31 @@ export class GCSService {
         },
       });
       
-      core.info(`Image uploaded successfully: ${fileName}`);
+      // アップロード成功時のログ
+      core.info(`Upload completed successfully`);
+      core.info(`  GCS Path: gs://${this.bucketName}/${fileName}`);
       
       // 署名付きURLを生成
+      const expiryDate = new Date(Date.now() + this.signedUrlExpiry * 1000);
       const [signedUrl] = await file.getSignedUrl({
         action: 'read',
         expires: Date.now() + this.signedUrlExpiry * 1000,
       });
       
-      core.info(`Signed URL generated for: ${fileName}`);
+      // 署名付きURL生成時の詳細ログ
+      const expiryDays = Math.round(this.signedUrlExpiry / 86400);
+      core.info(`Signed URL generated`);
+      core.info(`  URL: ${signedUrl}`);
+      core.info(`  Expires: ${expiryDate.toISOString()} (${expiryDays} days)`);
       
       return signedUrl;
     } catch (error) {
-      core.error(`Failed to upload image to GCS: ${error}`);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorStack = error instanceof Error ? error.stack : undefined;
+      core.error(`Failed to upload image to GCS: ${errorMessage}`);
+      if (errorStack) {
+        core.error(`Error stack: ${errorStack}`);
+      }
       throw error;
     }
   }
