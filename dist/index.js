@@ -62479,44 +62479,63 @@ class GCSService {
     /**
      * Base64エンコードされた画像データをGCSにアップロードし、署名付きURLを生成
      */
-    async uploadImage(imageData) {
+    async uploadImage(imageData, repository, issueNumber) {
         try {
             // ファイル名を生成（UUID v4で推測不可能にする）
             const extension = this.getExtensionFromMimeType(imageData.mimeType);
             const fileName = `${(0, uuid_1.v4)()}${extension}`;
+            // ファイルパスを/{repository}/{issue-number}/{uuid}.{extension}形式に生成
+            const filePath = `${repository}/${issueNumber}/${fileName}`;
             // Base64文字列をバイナリデータにデコード
             const buffer = Buffer.from(imageData.base64Data, 'base64');
             const fileSizeKB = Math.round(buffer.length / 1024);
             // アップロード開始時の詳細ログ
             core.info(`Uploading image to GCS...`);
-            core.info(`  File: ${fileName}`);
+            core.info(`  File: ${filePath}`);
             core.info(`  MIME Type: ${imageData.mimeType}`);
             core.info(`  Size: ${fileSizeKB}KB`);
             core.info(`  Bucket: ${this.bucketName}`);
             // バケットとファイルオブジェクトを取得
             const bucket = this.storage.bucket(this.bucketName);
-            const file = bucket.file(fileName);
+            const file = bucket.file(filePath);
             // ファイルをアップロード
             await file.save(buffer, {
                 metadata: {
                     contentType: imageData.mimeType,
                 },
             });
+            // バケットパスを生成
+            const bucketPath = `gs://${this.bucketName}/${filePath}`;
             // アップロード成功時のログ
             core.info(`Upload completed successfully`);
-            core.info(`  GCS Path: gs://${this.bucketName}/${fileName}`);
+            core.info(`  GCS Path: ${bucketPath}`);
             // 署名付きURLを生成
-            const expiryDate = new Date(Date.now() + this.signedUrlExpiry * 1000);
-            const [signedUrl] = await file.getSignedUrl({
-                action: 'read',
-                expires: Date.now() + this.signedUrlExpiry * 1000,
-            });
-            // 署名付きURL生成時の詳細ログ
-            const expiryDays = Math.round(this.signedUrlExpiry / 86400);
-            core.info(`Signed URL generated`);
-            core.info(`  URL: ${signedUrl}`);
-            core.info(`  Expires: ${expiryDate.toISOString()} (${expiryDays} days)`);
-            return signedUrl;
+            let signedUrl;
+            let expiryDate;
+            if (this.signedUrlExpiry > 0) {
+                expiryDate = new Date(Date.now() + this.signedUrlExpiry * 1000);
+                const [url] = await file.getSignedUrl({
+                    action: 'read',
+                    expires: Date.now() + this.signedUrlExpiry * 1000,
+                });
+                signedUrl = url;
+                // 署名付きURL生成時の詳細ログ
+                const expiryDays = Math.round(this.signedUrlExpiry / 86400);
+                core.info(`Signed URL generated`);
+                core.info(`  URL: ${signedUrl}`);
+                core.info(`  Expires: ${expiryDate.toISOString()} (${expiryDays} days)`);
+            }
+            else {
+                // 有効期限が無制限の場合は公開URLを使用（バケットが公開設定の場合）
+                signedUrl = file.publicUrl();
+                core.info(`Public URL generated (no expiry)`);
+                core.info(`  URL: ${signedUrl}`);
+            }
+            return {
+                url: signedUrl,
+                expiryDate: expiryDate,
+                bucketPath: bucketPath,
+            };
         }
         catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);
@@ -62637,7 +62656,7 @@ class GitHubService {
             throw error;
         }
     }
-    async postComment(issueNumber, imageUrls, command, progressCommentId) {
+    async postComment(issueNumber, imageResults, command, progressCommentId) {
         const imageType = command.type === 'concept'
             ? 'Concept Images'
             : command.type === 'custom'
@@ -62647,12 +62666,12 @@ class GitHubService {
                     : 'Wireframe Images';
         const MAX_COMMENT_SIZE = 65536; // GitHub limit
         try {
-            const totalImages = imageUrls.length;
+            const totalImages = imageResults.length;
             core.info(`Preparing comment with ${totalImages} images...`);
             // URLの長さを確認
-            const urlLengths = imageUrls.map(url => url.length);
+            const urlLengths = imageResults.map(result => result.url.length);
             const totalUrlLength = urlLengths.reduce((sum, len) => sum + len, 0);
-            const avgUrlLength = Math.round(totalUrlLength / imageUrls.length);
+            const avgUrlLength = Math.round(totalUrlLength / imageResults.length);
             core.info(`URL length analysis:`);
             core.info(`  Total URLs length: ${totalUrlLength} chars`);
             core.info(`  Average URL length: ${avgUrlLength} chars`);
@@ -62668,9 +62687,34 @@ class GitHubService {
                 commentBody += `Generated ${totalImages} ${imageType.toLowerCase()} based on the requirements:\n\n`;
             }
             // 画像を追加（![alt](url) 形式なので、URLの長さだけが問題）
-            for (let i = 0; i < imageUrls.length; i++) {
+            for (let i = 0; i < imageResults.length; i++) {
+                const result = imageResults[i];
                 commentBody += `### ${imageType.split(' ')[0]} ${i + 1}/${totalImages}\n`;
-                commentBody += `![${imageType} ${i + 1}](${imageUrls[i]})\n\n`;
+                commentBody += `![${imageType} ${i + 1}](${result.url})\n\n`;
+                // 有効期限がある場合は、有効期限情報とバケット情報を追加
+                if (result.expiryDate) {
+                    // 有効期限をJSTで表示
+                    const formatter = new Intl.DateTimeFormat('ja-JP', {
+                        timeZone: 'Asia/Tokyo',
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        hour12: false
+                    });
+                    const parts = formatter.formatToParts(result.expiryDate);
+                    const year = parts.find(p => p.type === 'year')?.value;
+                    const month = parts.find(p => p.type === 'month')?.value;
+                    const day = parts.find(p => p.type === 'day')?.value;
+                    const hour = parts.find(p => p.type === 'hour')?.value;
+                    const minute = parts.find(p => p.type === 'minute')?.value;
+                    commentBody += `📅 閲覧有効期限: ${year}年${month}月${day}日 ${hour}:${minute} (JST)\n\n`;
+                }
+                // バケット情報を追加
+                commentBody += `📦 バケットパス: \`${result.bucketPath}\`\n\n`;
+                // リロードコマンドを追加
+                commentBody += `🔄 画像を再生成するには、コメントで \`/gen-visual\` コマンドを実行してください\n\n`;
             }
             commentBody += `---\n*Generated by @gen-visual*`;
             // サイズチェック
@@ -62998,7 +63042,7 @@ async function run() {
         }
         // Upload images to GCS and get signed URLs
         core.info(`Starting upload of ${imageDataArray.length} images to GCS...`);
-        const imageUrls = [];
+        const imageResults = [];
         const uploadStartTime = Date.now();
         for (let i = 0; i < imageDataArray.length; i++) {
             core.info(`\n--- Uploading image ${i + 1}/${imageDataArray.length} ---`);
@@ -63010,10 +63054,14 @@ async function run() {
                 core.warning(`Failed to update progress comment: ${error}`);
             }
             try {
-                const signedUrl = await gcsService.uploadImage(imageDataArray[i]);
-                imageUrls.push(signedUrl);
+                const result = await gcsService.uploadImage(imageDataArray[i], issueContext.repository, issueContext.issueNumber);
+                imageResults.push(result);
                 core.info(`✓ Image ${i + 1}/${imageDataArray.length} uploaded successfully`);
-                core.info(`  URL: ${signedUrl}`);
+                core.info(`  URL: ${result.url}`);
+                core.info(`  Bucket Path: ${result.bucketPath}`);
+                if (result.expiryDate) {
+                    core.info(`  Expires: ${result.expiryDate.toISOString()}`);
+                }
             }
             catch (error) {
                 core.error(`✗ Failed to upload image ${i + 1}/${imageDataArray.length}`);
@@ -63023,15 +63071,16 @@ async function run() {
         // アップロード完了時のサマリーログ
         const uploadDuration = ((Date.now() - uploadStartTime) / 1000).toFixed(2);
         core.info(`\n=== Upload Summary ===`);
-        core.info(`Total images uploaded: ${imageUrls.length}/${imageDataArray.length}`);
+        core.info(`Total images uploaded: ${imageResults.length}/${imageDataArray.length}`);
         core.info(`Upload duration: ${uploadDuration}s`);
         core.info(`Uploaded URLs:`);
-        imageUrls.forEach((url, index) => {
-            core.info(`  ${index + 1}. ${url}`);
+        imageResults.forEach((result, index) => {
+            core.info(`  ${index + 1}. ${result.url}`);
+            core.info(`     Bucket: ${result.bucketPath}`);
         });
         // Post comment with images (update progress comment)
         core.info('Posting comment with generated images...');
-        await githubService.postComment(issueContext.issueNumber, imageUrls, command, progressCommentId);
+        await githubService.postComment(issueContext.issueNumber, imageResults, command, progressCommentId);
         core.info('Successfully completed gen-visual action!');
     }
     catch (error) {
