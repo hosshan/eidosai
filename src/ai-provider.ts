@@ -1,4 +1,4 @@
-import { AIProvider, Command, IssueContext } from './types';
+import { AIProvider, Command, IssueContext, ImageData } from './types';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import * as core from '@actions/core';
 
@@ -11,23 +11,23 @@ export class GeminiProvider implements AIProvider {
     this.modelName = modelName;
   }
 
-  async generateImages(context: IssueContext, command: Command): Promise<string[]> {
+  async generateImages(context: IssueContext, command: Command): Promise<ImageData[]> {
     const imageCount = command.type === 'concept' ? 2 : 4;
     const imageType = command.type === 'concept' ? 'concept images' : 'wireframe images';
     
     core.info(`Generating ${imageCount} ${imageType} using ${this.modelName}...`);
     
     try {
-      const images: string[] = [];
+      const images: ImageData[] = [];
       
       // Generate each image with a specific prompt
       for (let i = 0; i < imageCount; i++) {
         const prompt = this.buildPrompt(context, command, imageType, i + 1, imageCount);
         core.info(`Generating image ${i + 1}/${imageCount}...`);
         
-        const imageUrl = await this.generateSingleImage(prompt);
-        if (imageUrl) {
-          images.push(imageUrl);
+        const imageData = await this.generateSingleImage(prompt);
+        if (imageData) {
+          images.push(imageData);
         }
       }
       
@@ -43,7 +43,7 @@ export class GeminiProvider implements AIProvider {
     }
   }
 
-  private async generateSingleImage(prompt: string): Promise<string> {
+  private async generateSingleImage(prompt: string): Promise<ImageData | null> {
     try {
       const model = this.genAI.getGenerativeModel({ model: this.modelName });
       
@@ -64,10 +64,13 @@ export class GeminiProvider implements AIProvider {
             // Check if this part contains inline data (image)
             if ('inlineData' in part && part.inlineData) {
               const mimeType = part.inlineData.mimeType || 'image/png';
-              const data = part.inlineData.data;
+              const base64Data = part.inlineData.data;
               
-              // Return data URL format that can be embedded in markdown
-              return `data:${mimeType};base64,${data}`;
+              // Return ImageData object with mimeType and base64Data
+              return {
+                mimeType,
+                base64Data,
+              };
             }
           }
         }

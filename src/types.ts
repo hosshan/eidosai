@@ -10,8 +10,20 @@ export interface IssueContext {
   repository: string;
 }
 
+export interface ImageData {
+  mimeType: string;
+  base64Data: string;
+}
+
+export interface GCSConfig {
+  projectId: string;
+  bucketName: string;
+  serviceAccountKey: string;
+  signedUrlExpiry: number;
+}
+
 export interface AIProvider {
-  generateImages(context: IssueContext, command: Command): Promise<string[]>;
+  generateImages(context: IssueContext, command: Command): Promise<ImageData[]>;
 }
 
 export interface ImageGenerationResult {
