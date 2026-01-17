@@ -1,56 +1,56 @@
-# gen-visual-issue
+# eidosai
 
 GitHub Issue上でAI（Gemini画像生成API）を使って要件の図示化を行うGitHub Action
 
 ## 概要
 
-GitHub Issueで **@gen-visual** にメンションして指示を出すと、Issue本文・コメントから要件を要約し、**コンセプト画像**や**ワイヤーフレーム画像**をGemini画像生成APIで生成して、Issueコメントとして貼り付けます。
+GitHub Issueで **@eidosai** にメンションして指示を出すと、Issue本文・コメントから要件を要約し、**コンセプト画像**や**ワイヤーフレーム画像**をGemini画像生成APIで生成して、Issueコメントとして貼り付けます。
 
 ## コマンド
 
 ### 基本コマンド
 
-- `@gen-visual wf` - ワイヤーフレーム画像を生成（デフォルト: 4枚）
-- `@gen-visual concept` - コンセプト画像を生成（デフォルト: 2枚）
-- `@gen-visual "説明文"` - カスタム画像を生成（テキスト指示に基づく、デフォルト: 2枚）
-- `@gen-visual custom "説明文"` - カスタム画像を生成（明示的な形式）
-- `@gen-visual modify` - 既存画面を参考に修正版を生成（デフォルト: 2枚）
+- `@eidosai wf` - ワイヤーフレーム画像を生成（デフォルト: 4枚）
+- `@eidosai concept` - コンセプト画像を生成（デフォルト: 2枚）
+- `@eidosai modify` - 既存画面を参考に修正版を生成（デフォルト: 2枚）
+- `@eidosai "説明文"` - カスタム画像を生成（テキスト指示に基づく、デフォルト: 2枚）
+- `@eidosai custom "説明文"` - カスタム画像を生成（明示的な形式）
 
 ### オプション
 
-- `--count` / `-c <数値>` - 画像生成枚数を指定（例: `@gen-visual wf --count 6`）
-- `--no-issue-body` - Issue本文をコンテキストから除外し、コメント本文のみを使用（例: `@gen-visual wf --no-issue-body`）
+- `--count` / `-c <数値>` - 画像生成枚数を指定（例: `@eidosai wf --count 6`）
+- `--no-issue-body` - Issue本文をコンテキストから除外し、コメント本文のみを使用（例: `@eidosai wf --no-issue-body`）
 
-複数のオプションを組み合わせて使用可能です（例: `@gen-visual wf --count 6 --no-issue-body`）。
-
-### カスタム画像生成について
-
-カスタム画像生成では、Issue本文とコメント本文に加えて、指定したテキスト指示をコンテキストとして使用します。これにより、conceptやwireframe以外の任意の画像生成が可能です。
+複数のオプションを組み合わせて使用可能です（例: `@eidosai wf --count 6 --no-issue-body`）。
 
 ### 画面修正コマンド（modify）について
 
-`@gen-visual modify` コマンドは、既存の画面画像を参考にトンマナ（トーン&マナー）を揃えて修正版を生成します。
+`@eidosai modify` コマンドは、既存の画面画像を参考にトンマナ（トーン&マナー）を揃えて修正版を生成します。
 
 - **画像がある場合**: コメント内の画像（Markdown形式 `![alt](url)`）を自動的に検出し、その画像を参考にして同じデザインスタイルを維持しながら修正を行います。
 - **画像がない場合**: 通常のデザイン指示に基づいてUIデザインを生成します。
 
 コメント内に画像を添付する場合は、Markdown形式で記述してください：
 ```
-@gen-visual modify
+@eidosai modify
 
 この画面に「保存」ボタンを追加してください。
 
 ![現在の画面](画像URL)
 ```
 
+### カスタム画像生成について
+
+カスタム画像生成では、Issue本文とコメント本文に加えて、指定したテキスト指示をコンテキストとして使用します。これにより、conceptやwireframe以外の任意の画像生成が可能です。
+
 ## セットアップ
 
 ### 1. リポジトリにワークフローを追加
 
-`.github/workflows/gen-visual.yml`を作成：
+`.github/workflows/eidosai.yml`を作成：
 
 ```yaml
-name: Gen Visual Action
+name: Eidosai Action
 
 on:
   issue_comment:
@@ -64,19 +64,19 @@ permissions:
   contents: read
 
 jobs:
-  gen-visual:
+  eidosai:
     runs-on: ubuntu-latest
-    if: contains(github.event.comment.body, '@gen-visual') || contains(github.event.issue.body, '@gen-visual')
+    if: contains(github.event.comment.body, '@eidosai') || contains(github.event.issue.body, '@eidosai')
     
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         
-      - name: Run Gen Visual Action
-        uses: hosshan/gen-visual-issue@v1
+      - name: Run Eidosai Action
+        uses: hosshan/eidosai@v1
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          ai-api-key: ${{ secrets.GEN_VISUAL_AI_API_KEY }}
+          ai-api-key: ${{ secrets.EIDOSAI_AI_API_KEY }}
           ai-provider: 'gemini'
           model-name: 'gemini-3-pro-image-preview'
           gcs-project-id: ${{ vars.GCS_PROJECT_ID }}
@@ -91,18 +91,13 @@ jobs:
 
 #### Secrets（機密情報）
 
-- `GEN_VISUAL_AI_API_KEY` - Gemini APIキーなど（必須）
+- `EIDOSAI_AI_API_KEY` - Gemini APIキーなど（必須）
 - `GCS_SERVICE_ACCOUNT_KEY` - Google Cloud Storage サービスアカウントキー（JSON文字列、必須）
 
 #### Variables（非機密情報）
 
 - `GCS_PROJECT_ID` - Google Cloud Storage プロジェクトID（必須）
 - `GCS_BUCKET_NAME` - Google Cloud Storage バケット名（必須）
-
-**注意**: 
-- Secretsは機密情報（APIキー、認証情報など）に使用します
-- Variablesは非機密情報（プロジェクトID、バケット名など）に使用します
-- プロジェクトIDとバケット名は公開情報の可能性があるため、Variablesとして設定することを推奨します
 
 #### GCSサービスアカウントキーの取得方法
 
@@ -158,7 +153,7 @@ jobs:
 ### 3. 使い方
 
 1. GitHub Issueを作成し、要件を記述
-2. コメントで `@gen-visual wf` または `@gen-visual concept` とメンション
+2. コメントで `@eidosai wf` または `@eidosai concept` とメンション
 3. GitHub Actionが自動実行され、画像がコメントとして投稿される
 
 ## AIプロバイダの設定
@@ -221,11 +216,11 @@ jobs:
 ワークフローファイルでカスタムプロンプトを指定：
 
 ```yaml
-- name: Run Gen Visual Action
-  uses: hosshan/gen-visual-issue@v1
+- name: Run Eidosai Action
+  uses: hosshan/eidosai@v1
   with:
     github-token: ${{ secrets.GITHUB_TOKEN }}
-    ai-api-key: ${{ secrets.GEN_VISUAL_AI_API_KEY }}
+    ai-api-key: ${{ secrets.EIDOSAI_AI_API_KEY }}
     ai-provider: 'gemini'
     model-name: 'gemini-3-pro-image-preview'
     gcs-project-id: ${{ vars.GCS_PROJECT_ID }}
@@ -271,7 +266,7 @@ jobs:
 デフォルトでは以下のコンテキストが使用されます：
 
 - Issueの本文
-- @gen-visualをメンションしたコメントの全文
+- @eidosaiをメンションしたコメントの全文
 - カスタム画像生成の場合: 上記に加えて、指定したカスタム指示（`customPrompt`）
 - 画面修正（modify）の場合: 上記に加えて、コメント内の画像（Markdown形式 `![alt](url)` で記述された画像）
 
@@ -294,12 +289,12 @@ Issue本文:
 
 コメント:
 ```
-@gen-visual wf
+@eidosai wf
 ```
 
 または枚数を指定:
 ```
-@gen-visual wf --count 6
+@eidosai wf --count 6
 ```
 
 → ログイン画面のワイヤーフレームが自動生成され、コメントで投稿されます（デフォルト: 4枚、指定時: 指定枚数）
@@ -318,12 +313,12 @@ ECサイトのトップページをリニューアル
 
 コメント:
 ```
-@gen-visual concept
+@eidosai concept
 ```
 
 または枚数を指定:
 ```
-@gen-visual concept --count 3
+@eidosai concept --count 3
 ```
 
 → トップページのコンセプト画像が自動生成され、コメントで投稿されます（デフォルト: 2枚、指定時: 指定枚数）
@@ -337,17 +332,17 @@ Issue本文:
 
 コメント:
 ```
-@gen-visual "モダンで親しみやすいアイコンデザイン、グラデーションを使用"
+@eidosai "モダンで親しみやすいアイコンデザイン、グラデーションを使用"
 ```
 
 または明示的な形式:
 ```
-@gen-visual custom "モダンで親しみやすいアイコンデザイン、グラデーションを使用"
+@eidosai custom "モダンで親しみやすいアイコンデザイン、グラデーションを使用"
 ```
 
 または枚数を指定:
 ```
-@gen-visual "モダンで親しみやすいアイコンデザイン、グラデーションを使用" --count 5
+@eidosai "モダンで親しみやすいアイコンデザイン、グラデーションを使用" --count 5
 ```
 
 → Issue本文とカスタム指示に基づいた画像が自動生成され、コメントで投稿されます（デフォルト: 2枚、指定時: 指定枚数）
@@ -360,12 +355,12 @@ Issue本文:
 
 コメント:
 ```
-@gen-visual wf --no-issue-body
+@eidosai wf --no-issue-body
 ```
 
 または複数のオプションを組み合わせ:
 ```
-@gen-visual "シンプルなログイン画面" --count 3 --no-issue-body
+@eidosai "シンプルなログイン画面" --count 3 --no-issue-body
 ```
 
 → Issue本文を除外し、コメント本文のみをコンテキストとして使用して画像を生成します。
@@ -375,8 +370,8 @@ Issue本文:
 ワークフローファイルでカスタムプロンプトを指定：
 
 ```yaml
-- name: Run Gen Visual Action
-  uses: hosshan/gen-visual-issue@v1
+- name: Run Eidosai Action
+  uses: hosshan/eidosai@v1
   with:
     # ... 他の必須パラメータ ...
     system-prompt-concept: |
@@ -396,8 +391,8 @@ Issue本文:
 ワークフローファイルで共通コンテキストを指定：
 
 ```yaml
-- name: Run Gen Visual Action
-  uses: hosshan/gen-visual-issue@v1
+- name: Run Eidosai Action
+  uses: hosshan/eidosai@v1
   with:
     # ... 他の必須パラメータ ...
     system-prompt-common-context: |
@@ -423,7 +418,7 @@ Issue本文:
 
 コメント:
 ```
-@gen-visual modify
+@eidosai modify
 
 この画面に「保存」ボタンを追加してください。
 
@@ -432,7 +427,7 @@ Issue本文:
 
 または枚数を指定:
 ```
-@gen-visual modify --count 3
+@eidosai modify --count 3
 
 ヘッダーにロゴを追加し、カラースキームを変更してください。
 
@@ -462,7 +457,7 @@ npm run build
 
 ```bash
 export INPUT_GITHUB_TOKEN=your_token
-export INPUT_GEN_VISUAL_AI_API_KEY=your_api_key
+export INPUT_AI_API_KEY=your_api_key
 export INPUT_AI_PROVIDER=gemini
 export INPUT_GCS_PROJECT_ID=your_project_id
 export INPUT_GCS_BUCKET_NAME=your_bucket_name

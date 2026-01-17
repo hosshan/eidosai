@@ -1,8 +1,8 @@
 import { Command } from './types';
 
 export function parseCommand(text: string): Command | null {
-  // Match @gen-visual command
-  const genVisualMatch = text.match(/@gen-visual\s+(.+)/i);
+  // Match @eidosai command
+  const genVisualMatch = text.match(/@eidosai\s+(.+)/i);
   
   if (!genVisualMatch) {
     return null;
@@ -41,7 +41,7 @@ export function parseCommand(text: string): Command | null {
   }
   
   // Check for custom type with explicit "custom" keyword
-  // Format: @gen-visual custom "description" [--count N]
+  // Format: @eidosai custom "description" [--count N]
   const customExplicitMatch = rest.match(/^custom\s+(?:"([^"]+)"|'([^']+)'|([^\s]+(?:\s+[^\s]+)*?))$/i);
   if (customExplicitMatch) {
     const customPrompt = customExplicitMatch[1] || customExplicitMatch[2] || customExplicitMatch[3];
@@ -56,7 +56,7 @@ export function parseCommand(text: string): Command | null {
   }
   
   // Check for custom type without explicit keyword
-  // Format: @gen-visual "description" [--count N] or @gen-visual description [--count N]
+  // Format: @eidosai "description" [--count N] or @eidosai description [--count N]
   const customImplicitMatch = rest.match(/^(?:"([^"]+)"|'([^']+)'|([^\s]+(?:\s+[^\s]+)*?))$/i);
   if (customImplicitMatch) {
     const customPrompt = customImplicitMatch[1] || customImplicitMatch[2] || customImplicitMatch[3];

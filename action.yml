@@ -1,4 +1,4 @@
-name: 'Gen Visual'
+name: 'Eidosai'
 description: 'Generate wireframes and concept images from GitHub issue mentions'
 author: 'hosshan'
 inputs:
