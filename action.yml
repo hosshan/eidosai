@@ -16,6 +16,19 @@ inputs:
     description: 'Model name to use (e.g., gemini-3-pro-image-preview)'
     required: false
     default: 'gemini-3-pro-image-preview'
+  gcs-project-id:
+    description: 'Google Cloud Storage project ID'
+    required: true
+  gcs-bucket-name:
+    description: 'Google Cloud Storage bucket name'
+    required: true
+  gcs-service-account-key:
+    description: 'Google Cloud Storage service account key (JSON string)'
+    required: true
+  gcs-signed-url-expiry:
+    description: 'Signed URL expiry in seconds (default: 2592000 = 30 days)'
+    required: false
+    default: '2592000'
 runs:
   using: 'node20'
   main: 'dist/index.js'
