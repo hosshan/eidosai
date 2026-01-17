@@ -62302,7 +62302,8 @@ class GeminiProvider {
                 imageNumber,
                 totalCount,
                 aspect,
-                fullContext
+                fullContext,
+                commonContext: this.promptConfig.commonContext
             };
             // Use custom template if provided, otherwise use default function
             if (this.promptConfig.conceptTemplate) {
@@ -62321,7 +62322,8 @@ class GeminiProvider {
                 totalCount,
                 aspect,
                 fullContext,
-                customInstruction
+                customInstruction,
+                commonContext: this.promptConfig.commonContext
             };
             // Use custom template if provided, otherwise use default function
             if (this.promptConfig.customTemplate) {
@@ -62339,7 +62341,8 @@ class GeminiProvider {
                 imageNumber,
                 totalCount,
                 aspect,
-                fullContext
+                fullContext,
+                commonContext: this.promptConfig.commonContext
             };
             // Use custom template if provided, otherwise use default function
             if (this.promptConfig.wireframeTemplate) {
@@ -62753,6 +62756,7 @@ async function run() {
         const customTemplate = core.getInput('system-prompt-custom', { required: false });
         const wireframeAspectsInput = core.getInput('system-prompt-wf-aspects', { required: false });
         const conceptAspectsInput = core.getInput('system-prompt-concept-aspects', { required: false });
+        const commonContext = core.getInput('system-prompt-common-context', { required: false });
         // Build PromptConfig
         const promptConfig = {};
         if (wireframeTemplate) {
@@ -62769,6 +62773,9 @@ async function run() {
         }
         if (conceptAspectsInput) {
             promptConfig.conceptAspects = conceptAspectsInput.split(',').map(a => a.trim()).filter(a => a.length > 0);
+        }
+        if (commonContext) {
+            promptConfig.commonContext = commonContext;
         }
         core.info('Starting gen-visual action...');
         // Initialize services
@@ -63006,8 +63013,11 @@ exports.conceptAspects = [
  * Build a wireframe prompt
  */
 function buildWireframePrompt(params) {
-    const { imageNumber, totalCount, aspect, fullContext } = params;
-    return `Create a wireframe image (${imageNumber}/${totalCount}) for the following requirement that shows ${aspect}:
+    const { imageNumber, totalCount, aspect, fullContext, commonContext } = params;
+    const commonContextSection = commonContext
+        ? `## Service Context\n${commonContext}\n\n`
+        : '';
+    return `${commonContextSection}Create a wireframe image (${imageNumber}/${totalCount}) for the following requirement that shows ${aspect}:
 
 ${fullContext}
 
@@ -63017,8 +63027,11 @@ Generate a clear wireframe diagram that shows ${aspect}. The wireframe should be
  * Build a concept prompt
  */
 function buildConceptPrompt(params) {
-    const { imageNumber, totalCount, aspect, fullContext } = params;
-    return `Create a concept image (${imageNumber}/${totalCount}) for the following requirement that shows ${aspect}:
+    const { imageNumber, totalCount, aspect, fullContext, commonContext } = params;
+    const commonContextSection = commonContext
+        ? `## Service Context\n${commonContext}\n\n`
+        : '';
+    return `${commonContextSection}Create a concept image (${imageNumber}/${totalCount}) for the following requirement that shows ${aspect}:
 
 ${fullContext}
 
@@ -63028,8 +63041,11 @@ Generate a high-quality concept visualization that clearly demonstrates ${aspect
  * Build a custom prompt
  */
 function buildCustomPrompt(params) {
-    const { imageNumber, totalCount, fullContext, customInstruction } = params;
-    return `Create a custom image (${imageNumber}/${totalCount}) based on the following requirements and custom instruction:
+    const { imageNumber, totalCount, fullContext, customInstruction, commonContext } = params;
+    const commonContextSection = commonContext
+        ? `## Service Context\n${commonContext}\n\n`
+        : '';
+    return `${commonContextSection}Create a custom image (${imageNumber}/${totalCount}) based on the following requirements and custom instruction:
 
 ${fullContext}
 
@@ -63047,6 +63063,7 @@ function replacePlaceholders(template, params) {
     result = result.replace(/\{\{aspect\}\}/g, params.aspect || '');
     result = result.replace(/\{\{fullContext\}\}/g, params.fullContext);
     result = result.replace(/\{\{customInstruction\}\}/g, params.customInstruction || '');
+    result = result.replace(/\{\{commonContext\}\}/g, params.commonContext || '');
     return result;
 }
 
