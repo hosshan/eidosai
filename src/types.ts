@@ -1,6 +1,9 @@
 export interface Command {
-  type: 'wf' | 'concept';
+  type: 'wf' | 'concept' | 'custom';
   rawText: string;
+  count?: number;
+  customPrompt?: string;
+  excludeIssueBody?: boolean;
 }
 
 export interface IssueContext {

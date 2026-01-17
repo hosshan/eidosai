@@ -12,8 +12,26 @@ export class GeminiProvider implements AIProvider {
   }
 
   async generateImages(context: IssueContext, command: Command): Promise<ImageData[]> {
-    const imageCount = command.type === 'concept' ? 2 : 4;
-    const imageType = command.type === 'concept' ? 'concept images' : 'wireframe images';
+    // Determine image count: use specified count or default based on type
+    let imageCount: number;
+    if (command.count !== undefined) {
+      imageCount = command.count;
+    } else {
+      // Default counts
+      if (command.type === 'concept') {
+        imageCount = 2;
+      } else if (command.type === 'custom') {
+        imageCount = 2;
+      } else {
+        imageCount = 4; // wireframe
+      }
+    }
+    
+    const imageType = command.type === 'concept' 
+      ? 'concept images' 
+      : command.type === 'custom' 
+      ? 'custom images' 
+      : 'wireframe images';
     
     core.info(`Generating ${imageCount} ${imageType} using ${this.modelName}...`);
     
@@ -93,7 +111,11 @@ export class GeminiProvider implements AIProvider {
   }
 
   private buildPrompt(context: IssueContext, command: Command, imageType: string, imageNumber: number, totalCount: number): string {
-    const fullContext = `${context.issueBody}\n\n${context.commentBody}`;
+    // Combine Issue body and comment body as context
+    // If excludeIssueBody is true, only use comment body
+    const fullContext = command.excludeIssueBody 
+      ? context.commentBody 
+      : `${context.issueBody}\n\n${context.commentBody}`;
     
     if (command.type === 'concept') {
       const aspects = [
@@ -107,7 +129,19 @@ export class GeminiProvider implements AIProvider {
 ${fullContext}
 
 Generate a high-quality concept visualization that clearly demonstrates ${aspect}. The image should be professional and visually appealing.`;
+    } else if (command.type === 'custom') {
+      // Custom type: use customPrompt along with full context
+      const customInstruction = command.customPrompt || '';
+      
+      return `Create a custom image (${imageNumber}/${totalCount}) based on the following requirements and custom instruction:
+
+${fullContext}
+
+Custom instruction: ${customInstruction}
+
+Generate a high-quality image that fulfills the above requirements and follows the custom instruction. The image should be professional and visually appealing.`;
     } else {
+      // wireframe type
       const aspects = [
         'main page layout and overall structure',
         'detailed UI components and their placement',

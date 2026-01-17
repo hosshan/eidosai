@@ -40,7 +40,7 @@ async function run(): Promise<void> {
       return;
     }
 
-    core.info(`Command detected: @gen-visual ${command.type}`);
+    core.info(`Command detected: @gen-visual ${command.type}${command.count ? ` ${command.count}` : ''}${command.customPrompt ? ` "${command.customPrompt}"` : ''}`);
 
     // Add reaction to comment or issue
     try {
@@ -54,7 +54,11 @@ async function run(): Promise<void> {
     }
 
     // Create progress comment
-    const imageType = command.type === 'concept' ? 'Concept Images' : 'Wireframe Images';
+    const imageType = command.type === 'concept' 
+      ? 'Concept Images' 
+      : command.type === 'custom' 
+      ? 'Custom Images' 
+      : 'Wireframe Images';
     let progressCommentId: number;
     try {
       progressCommentId = await githubService.createProgressComment(issueContext.issueNumber, command);
