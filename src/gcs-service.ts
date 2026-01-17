@@ -1,7 +1,7 @@
 import { Storage } from '@google-cloud/storage';
 import * as core from '@actions/core';
 import { v4 as uuidv4 } from 'uuid';
-import { GCSConfig, ImageData } from './types';
+import { GCSConfig, ImageData, ImageUploadResult } from './types';
 
 export class GCSService {
   private storage: Storage;
@@ -32,11 +32,14 @@ export class GCSService {
   /**
    * Base64エンコードされた画像データをGCSにアップロードし、署名付きURLを生成
    */
-  async uploadImage(imageData: ImageData): Promise<string> {
+  async uploadImage(imageData: ImageData, repository: string, issueNumber: number): Promise<ImageUploadResult> {
     try {
       // ファイル名を生成（UUID v4で推測不可能にする）
       const extension = this.getExtensionFromMimeType(imageData.mimeType);
       const fileName = `${uuidv4()}${extension}`;
+      
+      // ファイルパスを/{repository}/{issue-number}/{uuid}.{extension}形式に生成
+      const filePath = `${repository}/${issueNumber}/${fileName}`;
       
       // Base64文字列をバイナリデータにデコード
       const buffer = Buffer.from(imageData.base64Data, 'base64');
@@ -44,14 +47,14 @@ export class GCSService {
       
       // アップロード開始時の詳細ログ
       core.info(`Uploading image to GCS...`);
-      core.info(`  File: ${fileName}`);
+      core.info(`  File: ${filePath}`);
       core.info(`  MIME Type: ${imageData.mimeType}`);
       core.info(`  Size: ${fileSizeKB}KB`);
       core.info(`  Bucket: ${this.bucketName}`);
       
       // バケットとファイルオブジェクトを取得
       const bucket = this.storage.bucket(this.bucketName);
-      const file = bucket.file(fileName);
+      const file = bucket.file(filePath);
       
       // ファイルをアップロード
       await file.save(buffer, {
@@ -60,24 +63,42 @@ export class GCSService {
         },
       });
       
+      // バケットパスを生成
+      const bucketPath = `gs://${this.bucketName}/${filePath}`;
+      
       // アップロード成功時のログ
       core.info(`Upload completed successfully`);
-      core.info(`  GCS Path: gs://${this.bucketName}/${fileName}`);
+      core.info(`  GCS Path: ${bucketPath}`);
       
       // 署名付きURLを生成
-      const expiryDate = new Date(Date.now() + this.signedUrlExpiry * 1000);
-      const [signedUrl] = await file.getSignedUrl({
-        action: 'read',
-        expires: Date.now() + this.signedUrlExpiry * 1000,
-      });
+      let signedUrl: string;
+      let expiryDate: Date | undefined;
       
-      // 署名付きURL生成時の詳細ログ
-      const expiryDays = Math.round(this.signedUrlExpiry / 86400);
-      core.info(`Signed URL generated`);
-      core.info(`  URL: ${signedUrl}`);
-      core.info(`  Expires: ${expiryDate.toISOString()} (${expiryDays} days)`);
+      if (this.signedUrlExpiry > 0) {
+        expiryDate = new Date(Date.now() + this.signedUrlExpiry * 1000);
+        const [url] = await file.getSignedUrl({
+          action: 'read',
+          expires: Date.now() + this.signedUrlExpiry * 1000,
+        });
+        signedUrl = url;
+        
+        // 署名付きURL生成時の詳細ログ
+        const expiryDays = Math.round(this.signedUrlExpiry / 86400);
+        core.info(`Signed URL generated`);
+        core.info(`  URL: ${signedUrl}`);
+        core.info(`  Expires: ${expiryDate.toISOString()} (${expiryDays} days)`);
+      } else {
+        // 有効期限が無制限の場合は公開URLを使用（バケットが公開設定の場合）
+        signedUrl = file.publicUrl();
+        core.info(`Public URL generated (no expiry)`);
+        core.info(`  URL: ${signedUrl}`);
+      }
       
-      return signedUrl;
+      return {
+        url: signedUrl,
+        expiryDate: expiryDate,
+        bucketPath: bucketPath,
+      };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       const errorStack = error instanceof Error ? error.stack : undefined;

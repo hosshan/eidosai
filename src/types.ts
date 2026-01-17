@@ -46,3 +46,9 @@ export interface PromptConfig {
   conceptAspects?: string[];
   commonContext?: string;
 }
+
+export interface ImageUploadResult {
+  url: string;
+  expiryDate?: Date;
+  bucketPath: string;
+}
