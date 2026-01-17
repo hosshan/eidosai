@@ -1,14 +1,24 @@
-import { AIProvider, Command, IssueContext, ImageData } from './types';
+import { AIProvider, Command, IssueContext, ImageData, PromptConfig } from './types';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import * as core from '@actions/core';
+import {
+  wireframeAspects,
+  conceptAspects,
+  buildWireframePrompt,
+  buildConceptPrompt,
+  buildCustomPrompt,
+  replacePlaceholders
+} from './prompts';
 
 export class GeminiProvider implements AIProvider {
   private genAI: GoogleGenerativeAI;
   private modelName: string;
+  private promptConfig: PromptConfig;
 
-  constructor(apiKey: string, modelName: string = 'gemini-3-pro-image-preview') {
+  constructor(apiKey: string, modelName: string = 'gemini-3-pro-image-preview', promptConfig: PromptConfig = {}) {
     this.genAI = new GoogleGenerativeAI(apiKey);
     this.modelName = modelName;
+    this.promptConfig = promptConfig;
   }
 
   async generateImages(context: IssueContext, command: Command): Promise<ImageData[]> {
@@ -118,51 +128,67 @@ export class GeminiProvider implements AIProvider {
       : `${context.issueBody}\n\n${context.commentBody}`;
     
     if (command.type === 'concept') {
-      const aspects = [
-        'overall user interface design direction and visual style',
-        'key visual elements, branding, and color scheme'
-      ];
+      const aspects = this.promptConfig.conceptAspects || conceptAspects;
       const aspect = aspects[imageNumber - 1] || aspects[0];
       
-      return `Create a concept image (${imageNumber}/${totalCount}) for the following requirement that shows ${aspect}:
-
-${fullContext}
-
-Generate a high-quality concept visualization that clearly demonstrates ${aspect}. The image should be professional and visually appealing.`;
+      const params = {
+        imageNumber,
+        totalCount,
+        aspect,
+        fullContext
+      };
+      
+      // Use custom template if provided, otherwise use default function
+      if (this.promptConfig.conceptTemplate) {
+        return replacePlaceholders(this.promptConfig.conceptTemplate, params);
+      } else {
+        return buildConceptPrompt(params);
+      }
     } else if (command.type === 'custom') {
       // Custom type: use customPrompt along with full context
       const customInstruction = command.customPrompt || '';
+      const aspect = ''; // Custom type doesn't use aspects
       
-      return `Create a custom image (${imageNumber}/${totalCount}) based on the following requirements and custom instruction:
-
-${fullContext}
-
-Custom instruction: ${customInstruction}
-
-Generate a high-quality image that fulfills the above requirements and follows the custom instruction. The image should be professional and visually appealing.`;
+      const params = {
+        imageNumber,
+        totalCount,
+        aspect,
+        fullContext,
+        customInstruction
+      };
+      
+      // Use custom template if provided, otherwise use default function
+      if (this.promptConfig.customTemplate) {
+        return replacePlaceholders(this.promptConfig.customTemplate, params);
+      } else {
+        return buildCustomPrompt(params);
+      }
     } else {
       // wireframe type
-      const aspects = [
-        'main page layout and overall structure',
-        'detailed UI components and their placement',
-        'navigation flow and menu structure',
-        'user interaction points and key features'
-      ];
+      const aspects = this.promptConfig.wireframeAspects || wireframeAspects;
       const aspect = aspects[imageNumber - 1] || aspects[0];
       
-      return `Create a wireframe image (${imageNumber}/${totalCount}) for the following requirement that shows ${aspect}:
-
-${fullContext}
-
-Generate a clear wireframe diagram that shows ${aspect}. The wireframe should be clean, well-organized, and easy to understand, using typical wireframe conventions (boxes, labels, simple shapes).`;
+      const params = {
+        imageNumber,
+        totalCount,
+        aspect,
+        fullContext
+      };
+      
+      // Use custom template if provided, otherwise use default function
+      if (this.promptConfig.wireframeTemplate) {
+        return replacePlaceholders(this.promptConfig.wireframeTemplate, params);
+      } else {
+        return buildWireframePrompt(params);
+      }
     }
   }
 }
 
-export function createAIProvider(provider: string, apiKey: string, modelName: string): AIProvider {
+export function createAIProvider(provider: string, apiKey: string, modelName: string, promptConfig: PromptConfig = {}): AIProvider {
   switch (provider.toLowerCase()) {
     case 'gemini':
-      return new GeminiProvider(apiKey, modelName);
+      return new GeminiProvider(apiKey, modelName, promptConfig);
     default:
       throw new Error(`Unsupported AI provider: ${provider}`);
   }
