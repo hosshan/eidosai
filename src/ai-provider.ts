@@ -7,6 +7,7 @@ import {
   buildWireframePrompt,
   buildConceptPrompt,
   buildCustomPrompt,
+  buildModifyPrompt,
   replacePlaceholders
 } from './prompts';
 
@@ -32,6 +33,8 @@ export class GeminiProvider implements AIProvider {
         imageCount = 2;
       } else if (command.type === 'custom') {
         imageCount = 2;
+      } else if (command.type === 'modify') {
+        imageCount = 2;
       } else {
         imageCount = 4; // wireframe
       }
@@ -41,6 +44,8 @@ export class GeminiProvider implements AIProvider {
       ? 'concept images' 
       : command.type === 'custom' 
       ? 'custom images' 
+      : command.type === 'modify'
+      ? 'modified images'
       : 'wireframe images';
     
     core.info(`Generating ${imageCount} ${imageType} using ${this.modelName}...`);
@@ -53,7 +58,12 @@ export class GeminiProvider implements AIProvider {
         const prompt = this.buildPrompt(context, command, imageType, i + 1, imageCount);
         core.info(`Generating image ${i + 1}/${imageCount}...`);
         
-        const imageData = await this.generateSingleImage(prompt);
+        // For modify type, pass reference images if available
+        const referenceImages = command.type === 'modify' && context.referenceImages 
+          ? context.referenceImages 
+          : undefined;
+        
+        const imageData = await this.generateSingleImage(prompt, referenceImages);
         if (imageData) {
           images.push(imageData);
         }
@@ -71,13 +81,32 @@ export class GeminiProvider implements AIProvider {
     }
   }
 
-  private async generateSingleImage(prompt: string): Promise<ImageData | null> {
+  private async generateSingleImage(prompt: string, referenceImages?: ImageData[]): Promise<ImageData | null> {
     try {
       const model = this.genAI.getGenerativeModel({ model: this.modelName });
       
+      // Build parts array: include reference images if provided, then text prompt
+      const parts: any[] = [];
+      
+      // Add reference images first
+      if (referenceImages && referenceImages.length > 0) {
+        core.info(`Including ${referenceImages.length} reference image(s) in the request`);
+        for (const refImage of referenceImages) {
+          parts.push({
+            inlineData: {
+              mimeType: refImage.mimeType,
+              data: refImage.base64Data
+            }
+          });
+        }
+      }
+      
+      // Add text prompt
+      parts.push({ text: prompt });
+      
       const result = await model.generateContent({
-        contents: [{ role: 'user', parts: [{ text: prompt }] }],
-      });
+        contents: [{ role: 'user', parts }],
+      } as any);
       
       const response = result.response;
       
@@ -164,6 +193,25 @@ export class GeminiProvider implements AIProvider {
         return replacePlaceholders(this.promptConfig.customTemplate, params);
       } else {
         return buildCustomPrompt(params);
+      }
+    } else if (command.type === 'modify') {
+      // Modify type: check if reference images are available
+      const hasReferenceImages = context.referenceImages && context.referenceImages.length > 0;
+      
+      const params = {
+        imageNumber,
+        totalCount,
+        aspect: '', // Modify type doesn't use aspects
+        fullContext,
+        commonContext: this.promptConfig.commonContext,
+        hasReferenceImages
+      };
+      
+      // Use custom template if provided, otherwise use default function
+      if (this.promptConfig.modifyTemplate) {
+        return replacePlaceholders(this.promptConfig.modifyTemplate, params);
+      } else {
+        return buildModifyPrompt(params);
       }
     } else {
       // wireframe type

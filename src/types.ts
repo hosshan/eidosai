@@ -1,5 +1,5 @@
 export interface Command {
-  type: 'wf' | 'concept' | 'custom';
+  type: 'wf' | 'concept' | 'custom' | 'modify';
   rawText: string;
   count?: number;
   customPrompt?: string;
@@ -13,6 +13,7 @@ export interface IssueContext {
   repository: string;
   commentId?: number;
   isFromComment: boolean;
+  referenceImages?: ImageData[];
 }
 
 export interface ImageData {
@@ -40,6 +41,7 @@ export interface PromptConfig {
   wireframeTemplate?: string;
   conceptTemplate?: string;
   customTemplate?: string;
+  modifyTemplate?: string;
   wireframeAspects?: string[];
   conceptAspects?: string[];
   commonContext?: string;
