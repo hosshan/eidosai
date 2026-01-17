@@ -27,10 +27,10 @@ export function parseCommand(text: string): Command | null {
     rest = rest.replace(/--no-issue-body/gi, '').trim();
   }
   
-  // Check for existing types (wf or concept)
-  const existingTypeMatch = rest.match(/^(wf|concept)$/i);
+  // Check for existing types (wf, concept, or modify)
+  const existingTypeMatch = rest.match(/^(wf|concept|modify)$/i);
   if (existingTypeMatch) {
-    const commandType = existingTypeMatch[1].toLowerCase() as 'wf' | 'concept';
+    const commandType = existingTypeMatch[1].toLowerCase() as 'wf' | 'concept' | 'modify';
     
     return {
       type: commandType,

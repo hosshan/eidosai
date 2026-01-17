@@ -27,6 +27,7 @@ async function run(): Promise<void> {
     const wireframeTemplate = core.getInput('system-prompt-wf', { required: false });
     const conceptTemplate = core.getInput('system-prompt-concept', { required: false });
     const customTemplate = core.getInput('system-prompt-custom', { required: false });
+    const modifyTemplate = core.getInput('system-prompt-modify', { required: false });
     const wireframeAspectsInput = core.getInput('system-prompt-wf-aspects', { required: false });
     const conceptAspectsInput = core.getInput('system-prompt-concept-aspects', { required: false });
     const commonContext = core.getInput('system-prompt-common-context', { required: false });
@@ -42,6 +43,9 @@ async function run(): Promise<void> {
     }
     if (customTemplate) {
       promptConfig.customTemplate = customTemplate;
+    }
+    if (modifyTemplate) {
+      promptConfig.modifyTemplate = modifyTemplate;
     }
     if (wireframeAspectsInput) {
       promptConfig.wireframeAspects = wireframeAspectsInput.split(',').map(a => a.trim()).filter(a => a.length > 0);
@@ -72,6 +76,23 @@ async function run(): Promise<void> {
 
     core.info(`Command detected: @gen-visual ${command.type}${command.count ? ` ${command.count}` : ''}${command.customPrompt ? ` "${command.customPrompt}"` : ''}`);
 
+    // For modify command, extract and download reference images from comment
+    if (command.type === 'modify') {
+      try {
+        core.info('Extracting reference images from comment...');
+        const referenceImages = await githubService.extractAndDownloadImages(issueContext.commentBody);
+        if (referenceImages.length > 0) {
+          issueContext.referenceImages = referenceImages;
+          core.info(`Found ${referenceImages.length} reference image(s)`);
+        } else {
+          core.info('No reference images found in comment. Will generate based on design instructions only.');
+        }
+      } catch (error) {
+        core.warning(`Failed to extract reference images, but continuing: ${error}`);
+        // Continue without reference images
+      }
+    }
+
     // Add reaction to comment or issue
     try {
       if (issueContext.isFromComment && issueContext.commentId) {
@@ -88,6 +109,8 @@ async function run(): Promise<void> {
       ? 'Concept Images' 
       : command.type === 'custom' 
       ? 'Custom Images' 
+      : command.type === 'modify'
+      ? 'Modified Images'
       : 'Wireframe Images';
     let progressCommentId: number;
     try {
