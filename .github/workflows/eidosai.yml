@@ -1,4 +1,4 @@
-name: Eidosai Action
+name: EidosAI Action
 
 on:
   issue_comment:
@@ -20,7 +20,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         
-      - name: Run Eidosai Action
+      - name: Run EidosAI Action
         uses: ./
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}

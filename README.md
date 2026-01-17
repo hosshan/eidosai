@@ -12,9 +12,9 @@ GitHub Issueで **@eidosai** にメンションして指示を出すと、Issue�
 
 - `@eidosai wf` - ワイヤーフレーム画像を生成（デフォルト: 4枚）
 - `@eidosai concept` - コンセプト画像を生成（デフォルト: 2枚）
+- `@eidosai modify` - 既存画面を参考に修正版を生成（デフォルト: 2枚）
 - `@eidosai "説明文"` - カスタム画像を生成（テキスト指示に基づく、デフォルト: 2枚）
 - `@eidosai custom "説明文"` - カスタム画像を生成（明示的な形式）
-- `@eidosai modify` - 既存画面を参考に修正版を生成（デフォルト: 2枚）
 
 ### オプション
 
@@ -22,10 +22,6 @@ GitHub Issueで **@eidosai** にメンションして指示を出すと、Issue�
 - `--no-issue-body` - Issue本文をコンテキストから除外し、コメント本文のみを使用（例: `@eidosai wf --no-issue-body`）
 
 複数のオプションを組み合わせて使用可能です（例: `@eidosai wf --count 6 --no-issue-body`）。
-
-### カスタム画像生成について
-
-カスタム画像生成では、Issue本文とコメント本文に加えて、指定したテキスト指示をコンテキストとして使用します。これにより、conceptやwireframe以外の任意の画像生成が可能です。
 
 ### 画面修正コマンド（modify）について
 
@@ -42,6 +38,10 @@ GitHub Issueで **@eidosai** にメンションして指示を出すと、Issue�
 
 ![現在の画面](画像URL)
 ```
+
+### カスタム画像生成について
+
+カスタム画像生成では、Issue本文とコメント本文に加えて、指定したテキスト指示をコンテキストとして使用します。これにより、conceptやwireframe以外の任意の画像生成が可能です。
 
 ## セットアップ
 
@@ -98,11 +98,6 @@ jobs:
 
 - `GCS_PROJECT_ID` - Google Cloud Storage プロジェクトID（必須）
 - `GCS_BUCKET_NAME` - Google Cloud Storage バケット名（必須）
-
-**注意**: 
-- Secretsは機密情報（APIキー、認証情報など）に使用します
-- Variablesは非機密情報（プロジェクトID、バケット名など）に使用します
-- プロジェクトIDとバケット名は公開情報の可能性があるため、Variablesとして設定することを推奨します
 
 #### GCSサービスアカウントキーの取得方法
 
