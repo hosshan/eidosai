@@ -1,19 +1,70 @@
 import { Command } from './types';
 
 export function parseCommand(text: string): Command | null {
-  // Match @gen-visual followed by command (wf or concept)
-  const match = text.match(/@gen-visual\s+(wf|concept)/i);
+  // Match @gen-visual command
+  const genVisualMatch = text.match(/@gen-visual\s+(.+)/i);
   
-  if (!match) {
+  if (!genVisualMatch) {
     return null;
   }
 
-  const commandType = match[1].toLowerCase() as 'wf' | 'concept';
+  let rest = genVisualMatch[1].trim();
   
-  return {
-    type: commandType,
-    rawText: text
-  };
+  // Extract count from --count or -c option
+  let count: number | undefined;
+  const countMatch = rest.match(/(?:--count|-c)\s+(\d+)/i);
+  if (countMatch) {
+    count = parseInt(countMatch[1], 10);
+    // Remove count option from rest for further parsing
+    rest = rest.replace(/(?:--count|-c)\s+\d+/i, '').trim();
+  }
+  
+  // Check for existing types (wf or concept)
+  const existingTypeMatch = rest.match(/^(wf|concept)$/i);
+  if (existingTypeMatch) {
+    const commandType = existingTypeMatch[1].toLowerCase() as 'wf' | 'concept';
+    
+    return {
+      type: commandType,
+      rawText: text,
+      count: count
+    };
+  }
+  
+  // Check for custom type with explicit "custom" keyword
+  // Format: @gen-visual custom "description" [--count N]
+  const customExplicitMatch = rest.match(/^custom\s+(?:"([^"]+)"|'([^']+)'|([^\s]+(?:\s+[^\s]+)*?))$/i);
+  if (customExplicitMatch) {
+    const customPrompt = customExplicitMatch[1] || customExplicitMatch[2] || customExplicitMatch[3];
+    
+    return {
+      type: 'custom',
+      rawText: text,
+      customPrompt: customPrompt,
+      count: count
+    };
+  }
+  
+  // Check for custom type without explicit keyword
+  // Format: @gen-visual "description" [--count N] or @gen-visual description [--count N]
+  const customImplicitMatch = rest.match(/^(?:"([^"]+)"|'([^']+)'|([^\s]+(?:\s+[^\s]+)*?))$/i);
+  if (customImplicitMatch) {
+    const customPrompt = customImplicitMatch[1] || customImplicitMatch[2] || customImplicitMatch[3];
+    
+    // If the prompt is just a number, it's not a custom command
+    if (!isNaN(parseInt(customPrompt, 10)) && !customImplicitMatch[1] && !customImplicitMatch[2]) {
+      return null;
+    }
+    
+    return {
+      type: 'custom',
+      rawText: text,
+      customPrompt: customPrompt,
+      count: count
+    };
+  }
+  
+  return null;
 }
 
 export function extractContext(issueBody: string, commentBody: string): string {
