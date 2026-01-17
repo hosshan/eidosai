@@ -62191,12 +62191,15 @@ exports.GeminiProvider = void 0;
 exports.createAIProvider = createAIProvider;
 const generative_ai_1 = __nccwpck_require__(7656);
 const core = __importStar(__nccwpck_require__(7484));
+const prompts_1 = __nccwpck_require__(6224);
 class GeminiProvider {
     genAI;
     modelName;
-    constructor(apiKey, modelName = 'gemini-3-pro-image-preview') {
+    promptConfig;
+    constructor(apiKey, modelName = 'gemini-3-pro-image-preview', promptConfig = {}) {
         this.genAI = new generative_ai_1.GoogleGenerativeAI(apiKey);
         this.modelName = modelName;
+        this.promptConfig = promptConfig;
     }
     async generateImages(context, command) {
         // Determine image count: use specified count or default based on type
@@ -62293,50 +62296,66 @@ class GeminiProvider {
             ? context.commentBody
             : `${context.issueBody}\n\n${context.commentBody}`;
         if (command.type === 'concept') {
-            const aspects = [
-                'overall user interface design direction and visual style',
-                'key visual elements, branding, and color scheme'
-            ];
+            const aspects = this.promptConfig.conceptAspects || prompts_1.conceptAspects;
             const aspect = aspects[imageNumber - 1] || aspects[0];
-            return `Create a concept image (${imageNumber}/${totalCount}) for the following requirement that shows ${aspect}:
-
-${fullContext}
-
-Generate a high-quality concept visualization that clearly demonstrates ${aspect}. The image should be professional and visually appealing.`;
+            const params = {
+                imageNumber,
+                totalCount,
+                aspect,
+                fullContext
+            };
+            // Use custom template if provided, otherwise use default function
+            if (this.promptConfig.conceptTemplate) {
+                return (0, prompts_1.replacePlaceholders)(this.promptConfig.conceptTemplate, params);
+            }
+            else {
+                return (0, prompts_1.buildConceptPrompt)(params);
+            }
         }
         else if (command.type === 'custom') {
             // Custom type: use customPrompt along with full context
             const customInstruction = command.customPrompt || '';
-            return `Create a custom image (${imageNumber}/${totalCount}) based on the following requirements and custom instruction:
-
-${fullContext}
-
-Custom instruction: ${customInstruction}
-
-Generate a high-quality image that fulfills the above requirements and follows the custom instruction. The image should be professional and visually appealing.`;
+            const aspect = ''; // Custom type doesn't use aspects
+            const params = {
+                imageNumber,
+                totalCount,
+                aspect,
+                fullContext,
+                customInstruction
+            };
+            // Use custom template if provided, otherwise use default function
+            if (this.promptConfig.customTemplate) {
+                return (0, prompts_1.replacePlaceholders)(this.promptConfig.customTemplate, params);
+            }
+            else {
+                return (0, prompts_1.buildCustomPrompt)(params);
+            }
         }
         else {
             // wireframe type
-            const aspects = [
-                'main page layout and overall structure',
-                'detailed UI components and their placement',
-                'navigation flow and menu structure',
-                'user interaction points and key features'
-            ];
+            const aspects = this.promptConfig.wireframeAspects || prompts_1.wireframeAspects;
             const aspect = aspects[imageNumber - 1] || aspects[0];
-            return `Create a wireframe image (${imageNumber}/${totalCount}) for the following requirement that shows ${aspect}:
-
-${fullContext}
-
-Generate a clear wireframe diagram that shows ${aspect}. The wireframe should be clean, well-organized, and easy to understand, using typical wireframe conventions (boxes, labels, simple shapes).`;
+            const params = {
+                imageNumber,
+                totalCount,
+                aspect,
+                fullContext
+            };
+            // Use custom template if provided, otherwise use default function
+            if (this.promptConfig.wireframeTemplate) {
+                return (0, prompts_1.replacePlaceholders)(this.promptConfig.wireframeTemplate, params);
+            }
+            else {
+                return (0, prompts_1.buildWireframePrompt)(params);
+            }
         }
     }
 }
 exports.GeminiProvider = GeminiProvider;
-function createAIProvider(provider, apiKey, modelName) {
+function createAIProvider(provider, apiKey, modelName, promptConfig = {}) {
     switch (provider.toLowerCase()) {
         case 'gemini':
-            return new GeminiProvider(apiKey, modelName);
+            return new GeminiProvider(apiKey, modelName, promptConfig);
         default:
             throw new Error(`Unsupported AI provider: ${provider}`);
     }
@@ -62728,6 +62747,29 @@ async function run() {
         const gcsBucketName = core.getInput('gcs-bucket-name', { required: true });
         const gcsServiceAccountKey = core.getInput('gcs-service-account-key', { required: true });
         const gcsSignedUrlExpiry = parseInt(core.getInput('gcs-signed-url-expiry', { required: false }) || '2592000', 10);
+        // Get prompt configuration inputs
+        const wireframeTemplate = core.getInput('system-prompt-wf', { required: false });
+        const conceptTemplate = core.getInput('system-prompt-concept', { required: false });
+        const customTemplate = core.getInput('system-prompt-custom', { required: false });
+        const wireframeAspectsInput = core.getInput('system-prompt-wf-aspects', { required: false });
+        const conceptAspectsInput = core.getInput('system-prompt-concept-aspects', { required: false });
+        // Build PromptConfig
+        const promptConfig = {};
+        if (wireframeTemplate) {
+            promptConfig.wireframeTemplate = wireframeTemplate;
+        }
+        if (conceptTemplate) {
+            promptConfig.conceptTemplate = conceptTemplate;
+        }
+        if (customTemplate) {
+            promptConfig.customTemplate = customTemplate;
+        }
+        if (wireframeAspectsInput) {
+            promptConfig.wireframeAspects = wireframeAspectsInput.split(',').map(a => a.trim()).filter(a => a.length > 0);
+        }
+        if (conceptAspectsInput) {
+            promptConfig.conceptAspects = conceptAspectsInput.split(',').map(a => a.trim()).filter(a => a.length > 0);
+        }
         core.info('Starting gen-visual action...');
         // Initialize services
         const githubService = new github_service_1.GitHubService(githubToken);
@@ -62776,7 +62818,7 @@ async function run() {
         };
         const gcsService = new gcs_service_1.GCSService(gcsConfig);
         // Create AI provider
-        const provider = (0, ai_provider_1.createAIProvider)(aiProvider, aiApiKey, modelName);
+        const provider = (0, ai_provider_1.createAIProvider)(aiProvider, aiApiKey, modelName, promptConfig);
         // Generate images
         core.info('Generating images...');
         try {
@@ -62931,6 +62973,81 @@ ${issueBody}
 ${commentBody}
 `;
     return context.trim();
+}
+
+
+/***/ }),
+
+/***/ 6224:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+/**
+ * Default prompt templates for image generation
+ */
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.conceptAspects = exports.wireframeAspects = void 0;
+exports.buildWireframePrompt = buildWireframePrompt;
+exports.buildConceptPrompt = buildConceptPrompt;
+exports.buildCustomPrompt = buildCustomPrompt;
+exports.replacePlaceholders = replacePlaceholders;
+exports.wireframeAspects = [
+    'main page layout and overall structure',
+    'detailed UI components and their placement',
+    'navigation flow and menu structure',
+    'user interaction points and key features'
+];
+exports.conceptAspects = [
+    'overall user interface design direction and visual style',
+    'key visual elements, branding, and color scheme'
+];
+/**
+ * Build a wireframe prompt
+ */
+function buildWireframePrompt(params) {
+    const { imageNumber, totalCount, aspect, fullContext } = params;
+    return `Create a wireframe image (${imageNumber}/${totalCount}) for the following requirement that shows ${aspect}:
+
+${fullContext}
+
+Generate a clear wireframe diagram that shows ${aspect}. The wireframe should be clean, well-organized, and easy to understand, using typical wireframe conventions (boxes, labels, simple shapes).`;
+}
+/**
+ * Build a concept prompt
+ */
+function buildConceptPrompt(params) {
+    const { imageNumber, totalCount, aspect, fullContext } = params;
+    return `Create a concept image (${imageNumber}/${totalCount}) for the following requirement that shows ${aspect}:
+
+${fullContext}
+
+Generate a high-quality concept visualization that clearly demonstrates ${aspect}. The image should be professional and visually appealing.`;
+}
+/**
+ * Build a custom prompt
+ */
+function buildCustomPrompt(params) {
+    const { imageNumber, totalCount, fullContext, customInstruction } = params;
+    return `Create a custom image (${imageNumber}/${totalCount}) based on the following requirements and custom instruction:
+
+${fullContext}
+
+Custom instruction: ${customInstruction || ''}
+
+Generate a high-quality image that fulfills the above requirements and follows the custom instruction. The image should be professional and visually appealing.`;
+}
+/**
+ * Replace placeholders in a template string
+ */
+function replacePlaceholders(template, params) {
+    let result = template;
+    result = result.replace(/\{\{imageNumber\}\}/g, String(params.imageNumber));
+    result = result.replace(/\{\{totalCount\}\}/g, String(params.totalCount));
+    result = result.replace(/\{\{aspect\}\}/g, params.aspect || '');
+    result = result.replace(/\{\{fullContext\}\}/g, params.fullContext);
+    result = result.replace(/\{\{customInstruction\}\}/g, params.customInstruction || '');
+    return result;
 }
 
 
