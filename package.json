@@ -1,5 +1,5 @@
 {
-  "name": "gen-visual-issue",
+  "name": "eidosai",
   "version": "1.0.0",
   "description": "GitHub Action to generate visual content (wireframes and concept images) from issue mentions",
   "main": "dist/index.js",
