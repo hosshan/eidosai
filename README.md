@@ -15,23 +15,12 @@ GitHub Issueで **@gen-visual** にメンションして指示を出すと、Iss
 - `@gen-visual "説明文"` - カスタム画像を生成（テキスト指示に基づく、デフォルト: 2枚）
 - `@gen-visual custom "説明文"` - カスタム画像を生成（明示的な形式）
 
-### 画像枚数の指定
+### オプション
 
-画像生成枚数を `--count` または `-c` オプションで指定できます：
+- `--count` / `-c <数値>` - 画像生成枚数を指定（例: `@gen-visual wf --count 6`）
+- `--no-issue-body` - Issue本文をコンテキストから除外し、コメント本文のみを使用（例: `@gen-visual wf --no-issue-body`）
 
-- `@gen-visual wf --count 6` - ワイヤーフレーム画像を6枚生成
-- `@gen-visual concept --count 3` - コンセプト画像を3枚生成
-- `@gen-visual "説明文" --count 5` - カスタム画像を5枚生成
-- `@gen-visual custom "説明文" --count 5` - カスタム画像を5枚生成（明示的な形式）
-- `@gen-visual wf -c 6` - 短縮形（`-c` も使用可能）
-
-### Issue本文の除外
-
-`--no-issue-body` オプションを使用すると、Issue本文をコンテキストから除外し、コメント本文のみを使用して画像生成を行います：
-
-- `@gen-visual wf --no-issue-body` - Issue本文を除外してワイヤーフレーム画像を生成
-- `@gen-visual "説明文" --no-issue-body` - Issue本文を除外してカスタム画像を生成
-- `@gen-visual wf --count 6 --no-issue-body` - 複数のオプションを組み合わせ可能
+複数のオプションを組み合わせて使用可能です（例: `@gen-visual wf --count 6 --no-issue-body`）。
 
 ### カスタム画像生成について
 
