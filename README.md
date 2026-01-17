@@ -44,7 +44,7 @@ jobs:
         uses: hosshan/gen-visual-issue@v1
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          ai-api-key: ${{ secrets.AI_API_KEY }}
+          ai-api-key: ${{ secrets.GEN_VISUAL_AI_API_KEY }}
           ai-provider: 'gemini'
           model-name: 'gemini-3-pro-image-preview'
           gcs-project-id: ${{ vars.GCS_PROJECT_ID }}
@@ -59,7 +59,7 @@ jobs:
 
 #### Secrets（機密情報）
 
-- `AI_API_KEY` - Gemini APIキーなど（必須）
+- `GEN_VISUAL_AI_API_KEY` - Gemini APIキーなど（必須）
 - `GCS_SERVICE_ACCOUNT_KEY` - Google Cloud Storage サービスアカウントキー（JSON文字列、必須）
 
 #### Variables（非機密情報）
@@ -218,7 +218,7 @@ npm run build
 
 ```bash
 export INPUT_GITHUB_TOKEN=your_token
-export INPUT_AI_API_KEY=your_api_key
+export INPUT_GEN_VISUAL_AI_API_KEY=your_api_key
 export INPUT_AI_PROVIDER=gemini
 export INPUT_GCS_PROJECT_ID=your_project_id
 export INPUT_GCS_BUCKET_NAME=your_bucket_name
