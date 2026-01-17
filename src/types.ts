@@ -35,3 +35,11 @@ export interface ImageGenerationResult {
   urls: string[];
   count: number;
 }
+
+export interface PromptConfig {
+  wireframeTemplate?: string;
+  conceptTemplate?: string;
+  customTemplate?: string;
+  wireframeAspects?: string[];
+  conceptAspects?: string[];
+}

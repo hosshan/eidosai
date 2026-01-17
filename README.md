@@ -159,6 +159,59 @@ jobs:
 - 画像はGCSにアップロードされるため、GCSのストレージコストが発生する可能性があります。
 - 署名付きURLの有効期限はデフォルトで30日間です（`gcs-signed-url-expiry`パラメータで変更可能）。
 
+## システムプロンプトのカスタマイズ
+
+デフォルトのシステムプロンプトは、コード内で定義されていますが、GitHub Actionsの入力パラメータを使用してカスタマイズすることができます。
+
+### カスタムプロンプトテンプレート
+
+`system-prompt-wf`、`system-prompt-concept`、`system-prompt-custom` パラメータを使用して、各画像タイプ用のカスタムプロンプトテンプレートを指定できます。
+
+テンプレート内では以下のプレースホルダーを使用できます：
+
+- `{{imageNumber}}` - 現在の画像番号（1から開始）
+- `{{totalCount}}` - 生成する総画像数
+- `{{aspect}}` - 現在のアスペクト（aspects配列から取得）
+- `{{fullContext}}` - Issue本文とコメント本文の結合（またはコメント本文のみ）
+- `{{customInstruction}}` - カスタム指示（customタイプの場合のみ）
+
+### カスタムアスペクト
+
+`system-prompt-wf-aspects` と `system-prompt-concept-aspects` パラメータを使用して、各画像タイプ用のアスペクト（画像ごとの焦点）をカスタマイズできます。
+
+アスペクトはカンマ区切りで指定します。例：
+- `system-prompt-wf-aspects: "レイアウト構造,UIコンポーネント,ナビゲーション,インタラクション"`
+- `system-prompt-concept-aspects: "デザイン方向性,ビジュアルスタイル"`
+
+### 使用例
+
+ワークフローファイルでカスタムプロンプトを指定：
+
+```yaml
+- name: Run Gen Visual Action
+  uses: hosshan/gen-visual-issue@v1
+  with:
+    github-token: ${{ secrets.GITHUB_TOKEN }}
+    ai-api-key: ${{ secrets.GEN_VISUAL_AI_API_KEY }}
+    ai-provider: 'gemini'
+    model-name: 'gemini-3-pro-image-preview'
+    gcs-project-id: ${{ vars.GCS_PROJECT_ID }}
+    gcs-bucket-name: ${{ vars.GCS_BUCKET_NAME }}
+    gcs-service-account-key: ${{ secrets.GCS_SERVICE_ACCOUNT_KEY }}
+    system-prompt-wf: |
+      Create a detailed wireframe ({{imageNumber}}/{{totalCount}}) showing {{aspect}}:
+      
+      {{fullContext}}
+      
+      Focus on {{aspect}} and ensure the wireframe is clear and well-structured.
+    system-prompt-wf-aspects: "overall layout,component details,navigation,user interactions"
+```
+
+**注意**: 
+- カスタムテンプレートが指定されていない場合、デフォルトのプロンプトが使用されます。
+- カスタムアスペクトが指定されていない場合、デフォルトのアスペクトが使用されます。
+- テンプレート内のプレースホルダーは実行時に自動的に置換されます。
+
 ## 入力パラメータ
 
 | パラメータ | 説明 | 必須 | デフォルト |
@@ -171,6 +224,11 @@ jobs:
 | `gcs-bucket-name` | Google Cloud Storage バケット名 | はい | - |
 | `gcs-service-account-key` | GCSサービスアカウントキー（JSON文字列） | はい | - |
 | `gcs-signed-url-expiry` | 署名付きURLの有効期限（秒） | いいえ | `2592000` (30日) |
+| `system-prompt-wf` | ワイヤーフレーム用システムプロンプトテンプレート | いいえ | - |
+| `system-prompt-concept` | コンセプト用システムプロンプトテンプレート | いいえ | - |
+| `system-prompt-custom` | カスタム用システムプロンプトテンプレート | いいえ | - |
+| `system-prompt-wf-aspects` | ワイヤーフレーム用アスペクト（カンマ区切り） | いいえ | - |
+| `system-prompt-concept-aspects` | コンセプト用アスペクト（カンマ区切り） | いいえ | - |
 
 ## AIに渡すコンテキスト
 
@@ -274,6 +332,27 @@ Issue本文:
 ```
 
 → Issue本文を除外し、コメント本文のみをコンテキストとして使用して画像を生成します。
+
+### 例5: カスタムシステムプロンプトの使用
+
+ワークフローファイルでカスタムプロンプトを指定：
+
+```yaml
+- name: Run Gen Visual Action
+  uses: hosshan/gen-visual-issue@v1
+  with:
+    # ... 他の必須パラメータ ...
+    system-prompt-concept: |
+      Generate a professional concept visualization ({{imageNumber}}/{{totalCount}}) 
+      that demonstrates {{aspect}} for the following requirements:
+      
+      {{fullContext}}
+      
+      The image should be high-quality and visually appealing, clearly showing {{aspect}}.
+    system-prompt-concept-aspects: "design direction,visual style,branding elements"
+```
+
+→ カスタムプロンプトテンプレートとアスペクトを使用してコンセプト画像を生成します。
 
 ## 開発
 

@@ -4,7 +4,7 @@ import { parseCommand } from './parser';
 import { createAIProvider } from './ai-provider';
 import { GitHubService } from './github-service';
 import { GCSService } from './gcs-service';
-import { GCSConfig } from './types';
+import { GCSConfig, PromptConfig } from './types';
 
 async function run(): Promise<void> {
   try {
@@ -22,6 +22,32 @@ async function run(): Promise<void> {
       core.getInput('gcs-signed-url-expiry', { required: false }) || '2592000',
       10
     );
+
+    // Get prompt configuration inputs
+    const wireframeTemplate = core.getInput('system-prompt-wf', { required: false });
+    const conceptTemplate = core.getInput('system-prompt-concept', { required: false });
+    const customTemplate = core.getInput('system-prompt-custom', { required: false });
+    const wireframeAspectsInput = core.getInput('system-prompt-wf-aspects', { required: false });
+    const conceptAspectsInput = core.getInput('system-prompt-concept-aspects', { required: false });
+
+    // Build PromptConfig
+    const promptConfig: PromptConfig = {};
+    
+    if (wireframeTemplate) {
+      promptConfig.wireframeTemplate = wireframeTemplate;
+    }
+    if (conceptTemplate) {
+      promptConfig.conceptTemplate = conceptTemplate;
+    }
+    if (customTemplate) {
+      promptConfig.customTemplate = customTemplate;
+    }
+    if (wireframeAspectsInput) {
+      promptConfig.wireframeAspects = wireframeAspectsInput.split(',').map(a => a.trim()).filter(a => a.length > 0);
+    }
+    if (conceptAspectsInput) {
+      promptConfig.conceptAspects = conceptAspectsInput.split(',').map(a => a.trim()).filter(a => a.length > 0);
+    }
 
     core.info('Starting gen-visual action...');
 
@@ -77,7 +103,7 @@ async function run(): Promise<void> {
     const gcsService = new GCSService(gcsConfig);
 
     // Create AI provider
-    const provider = createAIProvider(aiProvider, aiApiKey, modelName);
+    const provider = createAIProvider(aiProvider, aiApiKey, modelName, promptConfig);
 
     // Generate images
     core.info('Generating images...');
