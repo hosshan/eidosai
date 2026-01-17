@@ -1,6 +1,6 @@
 import * as github from '@actions/github';
 import * as core from '@actions/core';
-import { Command, ImageData } from './types';
+import { Command, ImageData, IssueContext } from './types';
 
 export class GitHubService {
   private octokit: ReturnType<typeof github.getOctokit>;
@@ -116,7 +116,7 @@ export class GitHubService {
     }
   }
 
-  getIssueContext() {
+  getIssueContext(): IssueContext {
     const payload = this.context.payload;
     const commentId = payload.comment?.id;
     const isFromComment = !!payload.comment;
@@ -127,7 +127,8 @@ export class GitHubService {
       commentBody: payload.comment?.body || payload.issue?.body || '',
       repository: `${this.context.repo.owner}/${this.context.repo.repo}`,
       commentId: commentId,
-      isFromComment: isFromComment
+      isFromComment: isFromComment,
+      referenceImages: undefined
     };
   }
 
