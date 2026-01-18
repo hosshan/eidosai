@@ -59,7 +59,7 @@ jobs:
         uses: hosshan/eidosai@v1
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          ai-api-key: ${{ secrets.eidosai_AI_API_KEY }}
+          ai-api-key: ${{ secrets.EIDOSAI_AI_API_KEY }}
           ai-provider: 'gemini'
           model-name: 'gemini-3-pro-image-preview'
           gcs-project-id: ${{ vars.GCS_PROJECT_ID }}
