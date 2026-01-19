@@ -74,7 +74,7 @@ jobs:
 
 #### Secrets（機密情報）
 
-- `eidosai_AI_API_KEY` - Gemini APIキーなど（必須）
+- `EIDOSAI_AI_API_KEY` - Gemini APIキーなど（必須）
 - `GCS_SERVICE_ACCOUNT_KEY` - Google Cloud Storage サービスアカウントキー（JSON文字列、必須）
 
 #### Variables（非機密情報）
