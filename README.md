@@ -56,7 +56,7 @@ jobs:
         uses: actions/checkout@v4
         
       - name: Run eidosai Action
-        uses: hosshan/eidosai@v1
+        uses: hosshan/eidosai@v1.0.0
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           ai-api-key: ${{ secrets.EIDOSAI_AI_API_KEY }}
